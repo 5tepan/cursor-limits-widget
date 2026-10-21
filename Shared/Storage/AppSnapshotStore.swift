@@ -33,6 +33,7 @@ enum AppSnapshotStore {
         if let legacy = SnapshotStore.load() {
             let cursor = CursorUsageProvider().mapLegacy(legacy)
             return AppSnapshot(
+                schemaVersion: AppSnapshot.currentSchemaVersion,
                 fetchedAt: legacy.fetchedAt,
                 providers: [cursor],
                 enabledProviderIDs: AppPreferencesStore.defaultEnabled,

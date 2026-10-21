@@ -4,11 +4,16 @@ import WidgetKit
 
 @main
 struct CursorLimitsApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model = AppModel()
 
     var body: some Scene {
         MenuBarExtra {
             MenuBarContent(model: model)
+                .onAppear { appDelegate.model = model }
+                .onOpenURL { url in
+                    DeepLinkRouter.handle(url, model: model)
+                }
         } label: {
             HStack(spacing: 5) {
                 MenuBarGlyph(fraction: model.menuBarFraction)

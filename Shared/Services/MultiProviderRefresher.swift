@@ -29,6 +29,7 @@ enum MultiProviderRefresher {
         }
 
         return AppSnapshot(
+            schemaVersion: AppSnapshot.currentSchemaVersion,
             fetchedAt: Date(),
             providers: results,
             enabledProviderIDs: enabled,

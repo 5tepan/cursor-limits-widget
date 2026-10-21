@@ -28,5 +28,16 @@
 	<string>NSApplication</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.local.CursorLimits</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>cursorlimits</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

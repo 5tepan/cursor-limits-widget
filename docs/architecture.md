@@ -36,6 +36,14 @@ snapshot from disk.
 Each source implements `UsageProvider` (`id`, `isAvailable()`, `refresh()` →
 `ProviderUsage`). See [providers.md](providers.md).
 
+## External readers (file bridge)
+
+The Application Support `app-snapshot.json` is a **stable contract** for other
+local UIs (e.g. a read-only Cyclop Limits tab). Those readers must not call
+provider APIs — only Cursor Limits refreshes. See [snapshot-contract.md](snapshot-contract.md).
+
+Deep links: `cursorlimits://refresh`, `cursorlimits://settings`.
+
 ## Why dual-write
 
 The widget runs sandboxed. The host writes the same snapshot into the real

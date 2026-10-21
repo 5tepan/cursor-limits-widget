@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Project docs: MIT license, security policy, contributing guide, architecture and providers notes
 - GitHub Actions build workflow (`package.sh` on `main` / PRs)
 - Bilingual README (`README.md` / `README.ru.md`) with screenshots (menu bar + widgets caveat)
+- `schemaVersion` on `app-snapshot.json` + [snapshot contract](docs/snapshot-contract.md) for external readers
+- Deep links `cursorlimits://refresh` and `cursorlimits://settings` (Cyclop handoff)
 
 
 ## [1.1.0] - 2026-10-21

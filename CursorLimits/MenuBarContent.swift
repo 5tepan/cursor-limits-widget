@@ -64,6 +64,10 @@ struct MenuBarContent: View {
         .onChange(of: model.snapshot.fetchedAt) { _, _ in
             seedExpandedIfNeeded(forceMissingOnly: true)
         }
+        .onReceive(NotificationCenter.default.publisher(for: .cursorLimitsOpenSettings)) { _ in
+            NSApp.activate(ignoringOtherApps: true)
+            openSettings()
+        }
     }
 
     private func seedExpandedIfNeeded(forceMissingOnly: Bool = false) {

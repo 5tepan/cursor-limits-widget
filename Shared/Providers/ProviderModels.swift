@@ -95,8 +95,12 @@ struct ProviderUsage: Codable, Equatable, Sendable, Identifiable {
 
 }
 
-/// Aggregate written for the host + widgets.
+/// Aggregate written for the host + widgets (+ external readers such as Cyclop).
 struct AppSnapshot: Codable, Equatable, Sendable {
+    /// Bump when making breaking JSON changes. Missing key ⇒ treat as 1.
+    static let currentSchemaVersion = 1
+
+    var schemaVersion: Int
     var fetchedAt: Date
     var providers: [ProviderUsage]
     var enabledProviderIDs: [ProviderID]
@@ -110,10 +114,47 @@ struct AppSnapshot: Codable, Equatable, Sendable {
 
     static var empty: AppSnapshot {
         AppSnapshot(
+            schemaVersion: currentSchemaVersion,
             fetchedAt: .distantPast,
             providers: [],
             enabledProviderIDs: AppPreferencesStore.defaultEnabled,
             primaryProviderID: .cursor
         )
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion, fetchedAt, providers, enabledProviderIDs, primaryProviderID
+    }
+
+    init(
+        schemaVersion: Int = AppSnapshot.currentSchemaVersion,
+        fetchedAt: Date,
+        providers: [ProviderUsage],
+        enabledProviderIDs: [ProviderID],
+        primaryProviderID: ProviderID
+    ) {
+        self.schemaVersion = schemaVersion
+        self.fetchedAt = fetchedAt
+        self.providers = providers
+        self.enabledProviderIDs = enabledProviderIDs
+        self.primaryProviderID = primaryProviderID
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? Self.currentSchemaVersion
+        fetchedAt = try c.decode(Date.self, forKey: .fetchedAt)
+        providers = try c.decode([ProviderUsage].self, forKey: .providers)
+        enabledProviderIDs = try c.decode([ProviderID].self, forKey: .enabledProviderIDs)
+        primaryProviderID = try c.decode(ProviderID.self, forKey: .primaryProviderID)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(schemaVersion, forKey: .schemaVersion)
+        try c.encode(fetchedAt, forKey: .fetchedAt)
+        try c.encode(providers, forKey: .providers)
+        try c.encode(enabledProviderIDs, forKey: .enabledProviderIDs)
+        try c.encode(primaryProviderID, forKey: .primaryProviderID)
     }
 }
