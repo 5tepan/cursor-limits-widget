@@ -1,23 +1,27 @@
 import SwiftUI
 
+// MARK: - Shared chrome
+
 struct WidgetChrome<Content: View>: View {
-    var title: String
-    var subtitle: String?
-    var symbolName: String = "sparkles"
+    var horizontalPadding: CGFloat = 10
+    var verticalPadding: CGFloat = 10
+    var updatedAt: Date?
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: symbolName)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color(red: 0.95, green: 0.55, blue: 0.20))
-                Text(title)
-                    .font(.caption.weight(.semibold))
+                Image("BrandIcon")
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 14, height: 14)
+                    .clipShape(RoundedRectangle(cornerRadius: 3, style: .continuous))
+                Text(L10n.appName)
+                    .font(.caption2.weight(.semibold))
                     .lineLimit(1)
                 Spacer(minLength: 0)
-                if let subtitle {
-                    Text(subtitle)
+                if let updatedAt, updatedAt != .distantPast {
+                    Text(Formatters.timeAgo(updatedAt))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -25,7 +29,8 @@ struct WidgetChrome<Content: View>: View {
             }
             content
         }
-        .padding(12)
+        .padding(.horizontal, horizontalPadding)
+        .padding(.vertical, verticalPadding)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
             LinearGradient(
@@ -41,213 +46,189 @@ struct WidgetChrome<Content: View>: View {
     }
 }
 
+private extension AppSnapshot {
+    /// Primary first, then other OK providers in stable order.
+    var okProvidersPrimaryFirst: [ProviderUsage] {
+        let ok = providers.filter { $0.status == .ok }
+        let primaryID = primaryProviderID
+        return ok.sorted { a, b in
+            if a.providerID == primaryID { return true }
+            if b.providerID == primaryID { return false }
+            let ia = ProviderID.allCases.firstIndex(of: a.providerID) ?? 0
+            let ib = ProviderID.allCases.firstIndex(of: b.providerID) ?? 0
+            return ia < ib
+        }
+    }
+}
+
+private func providerPlanTitle(_ usage: ProviderUsage) -> String {
+    if usage.planName != "—", !usage.planName.isEmpty {
+        return "\(usage.providerID.displayName) · \(usage.planName)"
+    }
+    return usage.providerID.displayName
+}
+
+// MARK: - Small: primary only, ring-centric
+
 struct SmallUsageView: View {
     var snapshot: AppSnapshot
 
     private var usage: ProviderUsage? { snapshot.primary }
 
     var body: some View {
-        let reset = usage?.windows.compactMap(\.resetsAt).max()
         WidgetChrome(
-            title: usage?.planName ?? L10n.appName,
-            subtitle: Formatters.daysUntilReset(reset),
-            symbolName: usage?.providerID.symbolName ?? "sparkles"
+            horizontalPadding: 8,
+            verticalPadding: 8,
+            updatedAt: snapshot.fetchedAt
         ) {
             if let usage, usage.status == .ok {
-                HStack(spacing: 12) {
-                    ProgressRing(progress: usage.primaryFraction, lineWidth: 7, size: 58)
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(primaryLabel(usage))
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                        Text(Formatters.percent(usage.primaryFraction))
-                            .font(.title3.weight(.bold).monospacedDigit())
-                        Text("\(L10n.resetIn) \(Formatters.daysUntilReset(reset))")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                    }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(providerPlanTitle(usage))
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                    ProgressRing(progress: usage.primaryFraction, lineWidth: 7, size: 72)
+                        .frame(maxWidth: .infinity)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             } else {
                 StatusPlaceholder(usage: usage)
             }
         }
     }
-
-    private func primaryLabel(_ usage: ProviderUsage) -> String {
-        usage.windows.first?.label ?? usage.providerID.displayName
-    }
 }
+
+// MARK: - Medium: up to 3 compact columns (ring only)
 
 struct MediumUsageView: View {
     var snapshot: AppSnapshot
 
-    private var usage: ProviderUsage? { snapshot.primary }
+    private var visible: [ProviderUsage] {
+        Array(snapshot.okProvidersPrimaryFirst.prefix(3))
+    }
+
+    private var overflowCount: Int {
+        max(0, snapshot.okProvidersPrimaryFirst.count - 3)
+    }
 
     var body: some View {
         WidgetChrome(
-            title: usage.map { "\($0.providerID.displayName) · \($0.planName)" } ?? L10n.appName,
-            subtitle: snapshot.fetchedAt == .distantPast ? nil : Formatters.timeAgo(snapshot.fetchedAt),
-            symbolName: usage?.providerID.symbolName ?? "sparkles"
+            horizontalPadding: 8,
+            verticalPadding: 10,
+            updatedAt: snapshot.fetchedAt
         ) {
-            if let usage, usage.status == .ok {
-                VStack(alignment: .leading, spacing: 10) {
-                    HStack(alignment: .center, spacing: 14) {
-                        ProgressRing(progress: usage.primaryFraction, lineWidth: 8, size: 62)
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(usage.windows.prefix(3)) { window in
-                                UsageBar(title: window.label, fraction: window.fraction)
-                            }
+            if visible.isEmpty {
+                StatusPlaceholder(usage: snapshot.primary)
+            } else {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .bottom, spacing: 8) {
+                        ForEach(visible) { usage in
+                            MediumProviderColumn(usage: usage)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                         }
                     }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
 
-                    HStack(spacing: 12) {
-                        let reset = usage.windows.compactMap(\.resetsAt).max()
-                        MetricChip(label: L10n.resetIn, value: Formatters.daysUntilReset(reset))
-                        if usage.totalSpend != nil || usage.includedSpend != nil {
-                            MetricChip(
-                                label: L10n.spent,
-                                value: Formatters.spendDisplay(
-                                    totalSpend: usage.totalSpend,
-                                    includedSpend: usage.includedSpend
-                                )
-                            )
-                        }
-                        if usage.onDemandEnabled {
-                            MetricChip(
-                                label: L10n.onDemand,
-                                value: Formatters.dollars(fromCents: usage.onDemandUsedCents)
-                            )
-                        } else if let tokens = usage.tokenStats {
-                            MetricChip(label: L10n.t("Токены", "Tokens"), value: Formatters.compactNumber(tokens.totalTokens))
-                        } else if let fraction = usage.primaryFraction {
-                            MetricChip(label: L10n.t("Использовано", "Used"), value: Formatters.percent(fraction))
-                        }
+                    if overflowCount > 0 {
+                        Text(L10n.moreInMenuBar)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
                     }
                 }
-            } else {
-                StatusPlaceholder(usage: usage)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
         }
     }
 }
 
+private struct MediumProviderColumn: View {
+    let usage: ProviderUsage
+
+    var body: some View {
+        VStack(spacing: 6) {
+            Spacer(minLength: 0)
+            Text(providerPlanTitle(usage))
+                .font(.caption2.weight(.semibold))
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity)
+            ProgressRing(progress: usage.primaryFraction, lineWidth: 6, size: 56)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+}
+
+// MARK: - Large: up to 3 detailed cards (ring + bars, as in screenshot)
+
 struct LargeUsageView: View {
     var snapshot: AppSnapshot
 
-    private var usage: ProviderUsage? { snapshot.primary }
+    private var visible: [ProviderUsage] {
+        Array(snapshot.okProvidersPrimaryFirst.prefix(3))
+    }
+
+    private var overflowCount: Int {
+        max(0, snapshot.okProvidersPrimaryFirst.count - 3)
+    }
 
     var body: some View {
         WidgetChrome(
-            title: usage.map { "\($0.providerID.displayName) · \($0.planName)" } ?? L10n.appName,
-            subtitle: usage?.email,
-            symbolName: usage?.providerID.symbolName ?? "sparkles"
+            horizontalPadding: 8,
+            verticalPadding: 12,
+            updatedAt: snapshot.fetchedAt
         ) {
-            if let usage, usage.status == .ok {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 16) {
-                        ProgressRing(
-                            progress: usage.primaryFraction,
-                            lineWidth: 10,
-                            size: 78
-                        )
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(usage.windows) { window in
-                                UsageBar(title: windowLabel(window), fraction: window.fraction)
-                            }
-                            if let reset = usage.windows.compactMap(\.resetsAt).max() {
-                                HStack {
-                                    Text("\(L10n.t("Цикл до", "Cycle ends")) \(Formatters.shortDate(reset))")
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                    Spacer()
-                                    Text("\(L10n.resetIn) \(Formatters.daysUntilReset(reset))")
-                                        .font(.caption.weight(.semibold))
-                                }
-                            }
-                        }
-                    }
-
-                    if let tokens = usage.tokenStats {
-                        HStack(spacing: 10) {
-                            MetricChip(label: "Input", value: Formatters.compactNumber(tokens.inputTokens))
-                            MetricChip(label: "Output", value: Formatters.compactNumber(tokens.outputTokens))
-                            MetricChip(label: "Cache", value: Formatters.compactNumber(tokens.cacheReadTokens + tokens.cacheWriteTokens))
-                            MetricChip(label: L10n.t("Запросы", "Requests"), value: "\(tokens.eventCount)")
-                        }
-                    }
-
-                    if usage.includedSpend != nil || usage.totalSpend != nil || usage.onDemandEnabled {
-                        HStack(spacing: 10) {
-                            MetricChip(
-                                label: L10n.t("В лимите", "Included"),
-                                value: Formatters.spendDisplay(totalSpend: usage.includedSpend, includedSpend: nil)
-                            )
-                            MetricChip(
-                                label: L10n.spent,
-                                value: Formatters.spendDisplay(totalSpend: usage.totalSpend, includedSpend: nil)
-                            )
-                            if usage.onDemandEnabled {
-                                MetricChip(
-                                    label: L10n.onDemand,
-                                    value: Formatters.dollars(fromCents: usage.onDemandUsedCents)
-                                )
-                            }
-                        }
-                    }
-
-                    if !usage.topModels.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(L10n.topModels)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
-                            ForEach(usage.topModels.prefix(4)) { model in
-                                HStack {
-                                    Text(Formatters.shortModelName(model.name))
-                                        .font(.caption.monospaced())
-                                        .lineLimit(1)
-                                    Spacer()
-                                    Text("\(model.requests)×")
-                                        .font(.caption.monospacedDigit())
-                                        .foregroundStyle(.secondary)
-                                    Text(Formatters.compactNumber(model.tokens))
-                                        .font(.caption.monospacedDigit())
-                                        .frame(minWidth: 44, alignment: .trailing)
-                                }
-                            }
-                        }
-                    }
-
-                    // Compact strip of other enabled providers
-                    let others = snapshot.providers.filter {
-                        $0.providerID != usage.providerID && $0.status == .ok
-                    }
-                    if !others.isEmpty {
-                        HStack(spacing: 8) {
-                            ForEach(others.prefix(4)) { other in
-                                MetricChip(
-                                    label: other.providerID.displayName,
-                                    value: Formatters.percent(other.primaryFraction)
-                                )
-                            }
-                        }
-                    }
-
-                    Text("\(L10n.updated) \(Formatters.timeAgo(snapshot.fetchedAt))")
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
+            if visible.isEmpty {
+                StatusPlaceholder(usage: snapshot.primary)
             } else {
-                StatusPlaceholder(usage: usage)
+                VStack(alignment: .leading, spacing: 10) {
+                    ForEach(visible) { usage in
+                        LargeProviderBlock(usage: usage)
+                    }
+                    if overflowCount > 0 {
+                        Text(L10n.moreInMenuBar)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            }
+        }
+    }
+}
+
+/// Matches the screenshot: title, ring with %, bars for windows on the right.
+private struct LargeProviderBlock: View {
+    let usage: ProviderUsage
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(providerPlanTitle(usage))
+                .font(.subheadline.weight(.semibold))
+                .lineLimit(1)
+
+            HStack(alignment: .center, spacing: 14) {
+                ProgressRing(progress: usage.primaryFraction, lineWidth: 8, size: 72)
+                VStack(alignment: .leading, spacing: 8) {
+                    if usage.windows.isEmpty {
+                        UsageBar(title: L10n.t("Использовано", "Used"), fraction: usage.primaryFraction)
+                    } else {
+                        ForEach(usage.windows.prefix(3)) { window in
+                            UsageBar(title: windowLabel(window), fraction: window.fraction)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
 
     private func windowLabel(_ window: UsageWindow) -> String {
         switch window.label {
-        case "Auto": return "Auto / Composer"
-        case "API": return "API / Named models"
+        case "Auto": return "Auto"
+        case "API": return "API"
         default: return window.label
         }
     }

@@ -100,10 +100,12 @@ struct SettingsView: View {
                 settingsHeader(
                     title: L10n.providers,
                     subtitle: L10n.t(
-                        "Включите нужные сервисы. ★ — основной для виджета и меню-бара.",
-                        "Enable the services you use. ★ marks the primary for widget and menu bar."
+                        "Включите сервисы. Основной — первый в меню-баре и на виджете.",
+                        "Enable services. Primary is first in the menu bar and widget."
                     )
                 )
+
+                primaryPicker
 
                 VStack(spacing: 8) {
                     ForEach(ProviderID.allCases) { id in
@@ -123,6 +125,36 @@ struct SettingsView: View {
                 }
             }
             .padding(20)
+        }
+    }
+
+    private var primaryPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.primaryProvider)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.secondary)
+
+            Picker("", selection: Binding(
+                get: {
+                    model.preferences.primarySelectionMode == .automatic
+                        ? "automatic"
+                        : model.preferences.primaryProviderID.rawValue
+                },
+                set: { value in
+                    if value == "automatic" {
+                        model.setPrimaryAutomatic()
+                    } else if let id = ProviderID(rawValue: value) {
+                        model.setPrimaryProvider(id)
+                    }
+                }
+            )) {
+                Text(L10n.primaryAutomatic).tag("automatic")
+                ForEach(model.preferences.enabledProviderIDs, id: \.self) { id in
+                    Text(id.displayName).tag(id.rawValue)
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
         }
     }
 

@@ -5,19 +5,19 @@ struct MenuBarContent: View {
     @ObservedObject var model: AppModel
     @Environment(\.openSettings) private var openSettings
     @State private var languageExpanded = false
+    @State private var expandedIDs: Set<String> = []
+    @State private var didSeedExpanded = false
 
     private var providers: [ProviderUsage] {
         let enabled = Set(model.preferences.enabledProviderIDs)
-        let all = model.snapshot.providers.filter { enabled.contains($0.providerID) }
-        let ok = all.filter { $0.status == .ok }
-        // Hide auth-missing noise once at least one provider is connected.
-        if ok.isEmpty { return all }
         let primaryID = model.preferences.primaryProviderID
-        return all.filter { $0.status == .ok || $0.providerID == primaryID }
-    }
-
-    private var primary: ProviderUsage? {
-        model.snapshot.primary
+        let all = model.snapshot.providers.filter { enabled.contains($0.providerID) }
+        // Primary first (snapshot usually already ordered)
+        return all.sorted { a, b in
+            if a.providerID == primaryID { return true }
+            if b.providerID == primaryID { return false }
+            return false
+        }
     }
 
     private var hasAnyOK: Bool {
@@ -35,8 +35,17 @@ struct MenuBarContent: View {
                     ProviderCard(
                         usage: usage,
                         isPrimary: usage.providerID == model.preferences.primaryProviderID,
-                        expanded: usage.providerID == model.preferences.primaryProviderID
-                            || providers.count == 1
+                        expanded: expandedIDs.contains(usage.providerID.rawValue),
+                        onToggleExpanded: {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                let key = usage.providerID.rawValue
+                                if expandedIDs.contains(key) {
+                                    expandedIDs.remove(key)
+                                } else {
+                                    expandedIDs.insert(key)
+                                }
+                            }
+                        }
                     )
                 }
             }
@@ -46,9 +55,27 @@ struct MenuBarContent: View {
             Divider()
             footer
         }
-        .padding(14)
+        .padding(.horizontal, 16)
+        .padding(.top, 20)
+        .padding(.bottom, 28)
         .frame(width: 360)
         .id(model.language)
+        .onAppear { seedExpandedIfNeeded() }
+        .onChange(of: model.snapshot.fetchedAt) { _, _ in
+            seedExpandedIfNeeded(forceMissingOnly: true)
+        }
+    }
+
+    private func seedExpandedIfNeeded(forceMissingOnly: Bool = false) {
+        if !forceMissingOnly, didSeedExpanded { return }
+        let keys = Set(providers.map(\.providerID.rawValue))
+        if !didSeedExpanded {
+            expandedIDs = keys
+            didSeedExpanded = true
+        } else {
+            // Newly appeared providers start expanded
+            expandedIDs.formUnion(keys.subtracting(expandedIDs))
+        }
     }
 
     private var languagePicker: some View {
@@ -98,28 +125,24 @@ struct MenuBarContent: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 10) {
+            Image("BrandIcon")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 28, height: 28)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Image(systemName: primary?.providerID.symbolName ?? "sparkles")
-                        .font(.subheadline.weight(.bold))
-                        .foregroundStyle(Color(red: 0.95, green: 0.55, blue: 0.20))
-                    Text(headerTitle)
-                        .font(.headline)
-                        .lineLimit(1)
-                }
-                if let email = primary?.email, primary?.status == .ok {
-                    Text(email)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                } else if hasAnyOK {
+                Text(L10n.appName)
+                    .font(.headline)
+                    .lineLimit(1)
+                if hasAnyOK {
                     Text(providers.map(\.providerID.displayName).joined(separator: " · "))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
             }
-            Spacer()
+            Spacer(minLength: 0)
             Button {
                 Task { await model.refresh() }
             } label: {
@@ -130,13 +153,6 @@ struct MenuBarContent: View {
         }
     }
 
-    private var headerTitle: String {
-        if let primary, primary.status == .ok {
-            return "\(primary.providerID.displayName) · \(primary.planName)"
-        }
-        return L10n.appName
-    }
-
     private var footer: some View {
         HStack {
             Text(footerText)
@@ -145,7 +161,6 @@ struct MenuBarContent: View {
                 .lineLimit(2)
             Spacer()
             Button {
-                // LSUIElement menu-bar apps: SettingsLink is a no-op unless the app is activated.
                 NSApp.activate(ignoringOtherApps: true)
                 openSettings()
             } label: {
@@ -174,29 +189,38 @@ struct ProviderCard: View {
     let usage: ProviderUsage
     let isPrimary: Bool
     let expanded: Bool
+    let onToggleExpanded: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: usage.providerID.symbolName)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(usage.providerID.displayName)
-                    .font(.subheadline.weight(.semibold))
-                if usage.planName != "—", !usage.planName.isEmpty {
-                    Text("· \(usage.planName)")
-                        .font(.caption)
+            Button(action: onToggleExpanded) {
+                HStack(spacing: 6) {
+                    Image(systemName: usage.providerID.symbolName)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
+                    Text(usage.providerID.displayName)
+                        .font(.subheadline.weight(.semibold))
+                    if usage.planName != "—", !usage.planName.isEmpty {
+                        Text("· \(usage.planName)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                    if isPrimary {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundStyle(.orange)
+                    }
+                    Spacer(minLength: 0)
+                    statusTrailing
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
                 }
-                if isPrimary {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(.orange)
-                }
-                Spacer(minLength: 0)
-                statusTrailing
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
 
             if usage.status == .ok {
                 if expanded {
@@ -204,11 +228,11 @@ struct ProviderCard: View {
                 } else {
                     compactBody
                 }
-            } else {
+            } else if expanded {
                 Text(ProviderErrorCopy.shortStatus(for: usage, enabled: true))
                     .font(.caption2)
                     .foregroundStyle(.secondary)
-                    .lineLimit(2)
+                    .lineLimit(3)
             }
         }
         .padding(10)
@@ -238,7 +262,7 @@ struct ProviderCard: View {
 
     private var compactBody: some View {
         VStack(alignment: .leading, spacing: 6) {
-            ForEach(usage.windows) { window in
+            ForEach(usage.windows.prefix(2)) { window in
                 UsageBar(title: window.label, fraction: window.fraction)
             }
         }

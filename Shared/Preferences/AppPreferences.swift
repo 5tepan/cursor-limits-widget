@@ -1,24 +1,53 @@
 import Foundation
 import WidgetKit
 
-struct AppPreferences: Codable, Equatable, Sendable {
+enum PrimarySelectionMode: String, Codable, CaseIterable, Sendable {
+    case automatic
+    case manual
+}
+
+struct AppPreferences: Equatable, Sendable {
     var language: LanguagePreference
     var enabledProviderIDs: [ProviderID]
     var primaryProviderID: ProviderID
+    var primarySelectionMode: PrimarySelectionMode
 
     static var `default`: AppPreferences {
         AppPreferences(
             language: .system,
             enabledProviderIDs: AppPreferencesStore.defaultEnabled,
-            primaryProviderID: .cursor
+            primaryProviderID: .cursor,
+            primarySelectionMode: .automatic
         )
     }
 }
 
+extension AppPreferences: Codable {
+    enum CodingKeys: String, CodingKey {
+        case language, enabledProviderIDs, primaryProviderID, primarySelectionMode
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        language = try c.decodeIfPresent(LanguagePreference.self, forKey: .language) ?? .system
+        enabledProviderIDs = try c.decodeIfPresent([ProviderID].self, forKey: .enabledProviderIDs)
+            ?? AppPreferencesStore.defaultEnabled
+        primaryProviderID = try c.decodeIfPresent(ProviderID.self, forKey: .primaryProviderID) ?? .cursor
+        primarySelectionMode = try c.decodeIfPresent(PrimarySelectionMode.self, forKey: .primarySelectionMode)
+            ?? .automatic
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(language, forKey: .language)
+        try c.encode(enabledProviderIDs, forKey: .enabledProviderIDs)
+        try c.encode(primaryProviderID, forKey: .primaryProviderID)
+        try c.encode(primarySelectionMode, forKey: .primarySelectionMode)
+    }
+}
+
 enum AppPreferencesStore {
-    static let defaultEnabled: [ProviderID] = [
-        .cursor, .claude, .codex, .ollamaCloud, .opencodeGo, .copilot
-    ]
+    static let defaultEnabled: [ProviderID] = ProviderID.allCases
     private static let fileName = "preferences.json"
     private static let didChange = Notification.Name("CursorLimitsPreferencesDidChange")
 
@@ -50,7 +79,22 @@ enum AppPreferencesStore {
             if let prefs = try? JSONDecoder().decode(AppPreferences.self, from: data) {
                 return normalized(prefs)
             }
-            // Legacy language-only format
+            // Legacy without primarySelectionMode
+            if let legacy = try? JSONDecoder().decode(LegacyPrefs.self, from: data) {
+                var prefs = AppPreferences.default
+                if let language = LanguagePreference(rawValue: legacy.language ?? "system") {
+                    prefs.language = language
+                }
+                if let enabled = legacy.enabledProviderIDs, !enabled.isEmpty {
+                    prefs.enabledProviderIDs = enabled.compactMap(ProviderID.init(rawValue:))
+                }
+                if let primary = legacy.primaryProviderID.flatMap(ProviderID.init(rawValue:)) {
+                    prefs.primaryProviderID = primary
+                }
+                prefs.primarySelectionMode = .automatic
+                return normalized(prefs)
+            }
+            // Language-only format
             if let legacy = try? JSONDecoder().decode(LegacyLanguageFile.self, from: data),
                let language = LanguagePreference(rawValue: legacy.language)
             {
@@ -79,12 +123,27 @@ enum AppPreferencesStore {
         save(prefs)
     }
 
+    /// Pick primary among OK providers by highest usage fraction.
+    static func automaticPrimary(from providers: [ProviderUsage], enabled: [ProviderID]) -> ProviderID {
+        let enabledSet = Set(enabled)
+        let ok = providers.filter { enabledSet.contains($0.providerID) && $0.status == .ok }
+        guard !ok.isEmpty else {
+            return enabled.first ?? .cursor
+        }
+        let order = Dictionary(uniqueKeysWithValues: ProviderID.allCases.enumerated().map { ($1, $0) })
+        return ok.max { a, b in
+            let fa = a.primaryFraction ?? -1
+            let fb = b.primaryFraction ?? -1
+            if fa != fb { return fa < fb }
+            return (order[a.providerID] ?? 0) > (order[b.providerID] ?? 0)
+        }!.providerID
+    }
+
     private static func normalized(_ prefs: AppPreferences) -> AppPreferences {
         var copy = prefs
         if copy.enabledProviderIDs.isEmpty {
             copy.enabledProviderIDs = defaultEnabled
         }
-        // Keep unique order
         var seen = Set<ProviderID>()
         copy.enabledProviderIDs = copy.enabledProviderIDs.filter { seen.insert($0).inserted }
         if !copy.enabledProviderIDs.contains(copy.primaryProviderID) {
@@ -95,5 +154,11 @@ enum AppPreferencesStore {
 
     private struct LegacyLanguageFile: Codable {
         var language: String
+    }
+
+    private struct LegacyPrefs: Codable {
+        var language: String?
+        var enabledProviderIDs: [String]?
+        var primaryProviderID: String?
     }
 }

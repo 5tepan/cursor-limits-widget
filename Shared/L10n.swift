@@ -21,6 +21,9 @@ enum L10n {
     static var onDemand: String { t("Сверх лимита", "On-demand") }
     static var tokensCycle: String { t("Токены за цикл", "Tokens this cycle") }
     static var topModels: String { t("Топ моделей", "Top models") }
+    static var moreInMenuBar: String {
+        t("Ещё в меню-баре", "More in the menu bar")
+    }
 
     // Connection
     static var connectTitle: String { t("Подключение аккаунта", "Connect your account") }
@@ -32,6 +35,7 @@ enum L10n {
     }
     static var providers: String { t("Провайдеры", "Providers") }
     static var primaryProvider: String { t("Основной для виджета", "Primary for widget") }
+    static var primaryAutomatic: String { t("Авто (кто больше использовал)", "Auto (highest usage)") }
     static var connectGitHub: String { t("Подключить GitHub (Copilot)", "Connect GitHub (Copilot)") }
     static var waitingGitHub: String { t("Ожидание подтверждения…", "Waiting for confirmation…") }
     static var githubUserCode: String { t("Код", "Code") }

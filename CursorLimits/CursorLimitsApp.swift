@@ -37,6 +37,8 @@ final class AppModel: ObservableObject {
 
     private var timer: Timer?
     private var prefsObserver: NSObjectProtocol?
+    /// First refresh of this process runs full provider discovery.
+    private var pendingLaunchDiscovery = true
 
     var menuBarFraction: Double? {
         guard let primary = snapshot.primary, primary.status == .ok else { return nil }
@@ -97,9 +99,26 @@ final class AppModel: ObservableObject {
         Task { await refresh() }
     }
 
+    /// Manual pick — locks primary until user chooses Auto again.
     func setPrimaryProvider(_ id: ProviderID) {
-        AppPreferencesStore.update { $0.primaryProviderID = id }
+        AppPreferencesStore.update { prefs in
+            prefs.primarySelectionMode = .manual
+            prefs.primaryProviderID = id
+            if !prefs.enabledProviderIDs.contains(id) {
+                prefs.enabledProviderIDs.append(id)
+            }
+        }
         preferences = AppPreferencesStore.load()
+        applyPrimaryToSnapshot()
+        WidgetCenter.shared.reloadAllTimelines()
+        objectWillChange.send()
+    }
+
+    func setPrimaryAutomatic() {
+        AppPreferencesStore.update { $0.primarySelectionMode = .automatic }
+        preferences = AppPreferencesStore.load()
+        applyAutomaticPrimary(from: snapshot.providers)
+        applyPrimaryToSnapshot()
         WidgetCenter.shared.reloadAllTimelines()
         objectWillChange.send()
     }
@@ -118,7 +137,36 @@ final class AppModel: ObservableObject {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let next = await MultiProviderRefresher.refresh(preferences: preferences)
+        let discovery = pendingLaunchDiscovery
+        if discovery {
+            pendingLaunchDiscovery = false
+            AppPreferencesStore.update { prefs in
+                prefs.enabledProviderIDs = ProviderID.allCases
+            }
+            preferences = AppPreferencesStore.load()
+        }
+
+        var next = await MultiProviderRefresher.refresh(preferences: preferences)
+
+        if discovery {
+            pruneAfterDiscovery(snapshot: next)
+            preferences = AppPreferencesStore.load()
+            // Re-filter snapshot providers to enabled set for consistent UI
+            let enabled = Set(preferences.enabledProviderIDs)
+            next.providers = next.providers.filter { enabled.contains($0.providerID) }
+            next.enabledProviderIDs = preferences.enabledProviderIDs
+        }
+
+        if preferences.primarySelectionMode == .automatic {
+            applyAutomaticPrimary(from: next.providers)
+            preferences = AppPreferencesStore.load()
+        }
+
+        next.primaryProviderID = preferences.primaryProviderID
+        next.enabledProviderIDs = preferences.enabledProviderIDs
+        // Stable order: primary first, then enabled order
+        next.providers = orderedProviders(next.providers, primary: preferences.primaryProviderID)
+
         snapshot = next
         lastError = next.providers.first(where: { $0.status == .error })?.errorMessage
             ?? next.primary.flatMap { $0.status == .ok ? nil : $0.errorMessage }
@@ -150,6 +198,51 @@ final class AppModel: ObservableObject {
         } catch {
             lastError = error.localizedDescription
             copilotDeviceCode = nil
+        }
+    }
+
+    // MARK: - Discovery / primary helpers
+
+    private func pruneAfterDiscovery(snapshot: AppSnapshot) {
+        let keep = snapshot.providers
+            .filter { $0.status == .ok || $0.status == .error }
+            .map(\.providerID)
+        AppPreferencesStore.update { prefs in
+            prefs.enabledProviderIDs = keep.isEmpty ? [.cursor] : keep
+            // Drop manual primary if it was pruned
+            if !prefs.enabledProviderIDs.contains(prefs.primaryProviderID) {
+                prefs.primaryProviderID = prefs.enabledProviderIDs[0]
+            }
+        }
+    }
+
+    private func applyAutomaticPrimary(from providers: [ProviderUsage]) {
+        let id = AppPreferencesStore.automaticPrimary(
+            from: providers,
+            enabled: preferences.enabledProviderIDs
+        )
+        AppPreferencesStore.update { prefs in
+            guard prefs.primarySelectionMode == .automatic else { return }
+            prefs.primaryProviderID = id
+        }
+    }
+
+    private func applyPrimaryToSnapshot() {
+        var next = snapshot
+        next.primaryProviderID = preferences.primaryProviderID
+        next.enabledProviderIDs = preferences.enabledProviderIDs
+        next.providers = orderedProviders(next.providers, primary: preferences.primaryProviderID)
+        snapshot = next
+        try? AppSnapshotStore.save(next)
+    }
+
+    private func orderedProviders(_ providers: [ProviderUsage], primary: ProviderID) -> [ProviderUsage] {
+        providers.sorted { a, b in
+            if a.providerID == primary { return true }
+            if b.providerID == primary { return false }
+            let ia = ProviderID.allCases.firstIndex(of: a.providerID) ?? 0
+            let ib = ProviderID.allCases.firstIndex(of: b.providerID) ?? 0
+            return ia < ib
         }
     }
 }
