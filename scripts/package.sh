@@ -1,5 +1,6 @@
 #!/bin/bash
 # Build a distributable CursorLimits-*-macos.zip for GitHub Releases / sharing.
+# On GitHub Actions (no Apple certs) uses ad-hoc signing only.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -18,13 +19,20 @@ xcodegen generate
 echo "==> Building Release ($VERSION)"
 rm -rf "$DERIVED" "$DIST"
 mkdir -p "$DIST"
+
+# CI runners have no development team / certificates. Force ad-hoc signing during build
+# so xcodebuild does not exit 74 trying Automatic signing / Keychain.
 xcodebuild \
   -scheme "$APP_NAME" \
   -configuration Release \
   -derivedDataPath "$DERIVED" \
   -destination 'platform=macOS' \
   CODE_SIGN_IDENTITY="-" \
+  CODE_SIGN_STYLE=Manual \
+  CODE_SIGNING_REQUIRED=NO \
   CODE_SIGNING_ALLOWED=YES \
+  DEVELOPMENT_TEAM="" \
+  PROVISIONING_PROFILE_SPECIFIER="" \
   build
 
 APP="$DERIVED/Build/Products/Release/${APP_NAME}.app"
@@ -35,8 +43,16 @@ test -d "$APP"
 test -d "$APPEX"
 
 echo "==> Signing"
+# Prefer Apple Development locally (better widget gallery); fall back to ad-hoc on CI.
 IDENTITY_HASH="$(security find-identity -v -p codesigning 2>/dev/null | grep 'Apple Development' | grep -v 'CSSMERR' | head -1 | awk '{print $2}' || true)"
-SIGN_ID="${IDENTITY_HASH:--}"
+if [[ -n "${IDENTITY_HASH}" && "${CI:-}" != "true" ]]; then
+  SIGN_ID="$IDENTITY_HASH"
+  echo "Using Apple Development: $SIGN_ID"
+else
+  SIGN_ID="-"
+  echo "Using ad-hoc signature (-)"
+fi
+
 codesign --force --sign "$SIGN_ID" --entitlements "$WIDGET_ENTITLEMENTS" "$APPEX"
 codesign --force --sign "$SIGN_ID" --entitlements "$HOST_ENTITLEMENTS" "$APP"
 

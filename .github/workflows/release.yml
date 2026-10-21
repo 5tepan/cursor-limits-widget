@@ -18,6 +18,8 @@ jobs:
         run: brew install xcodegen
 
       - name: Package
+        env:
+          CI: "true"
         run: ./scripts/package.sh
 
       - name: Upload release assets
