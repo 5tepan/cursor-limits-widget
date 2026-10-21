@@ -3,8 +3,11 @@
 <plist version="1.0">
 <dict>
 	<key>com.apple.security.app-sandbox</key>
-	<false/>
-	<key>com.apple.security.network.client</key>
 	<true/>
+	<!-- Must be home-relative WITHOUT a leading slash -->
+	<key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+	<array>
+		<string>Library/Application Support/CursorLimits/</string>
+	</array>
 </dict>
 </plist>

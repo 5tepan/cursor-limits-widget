@@ -2,6 +2,7 @@ import SwiftUI
 
 struct MenuBarContent: View {
     @ObservedObject var model: AppModel
+    @State private var languageExpanded = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -10,29 +11,76 @@ struct MenuBarContent: View {
             if model.snapshot.status != .ok {
                 OnboardingView(model: model)
             } else {
-                usageSection
-                if let tokens = model.snapshot.tokenStats {
-                    Divider()
-                    tokensSection(tokens)
-                }
-                if !model.snapshot.topModels.isEmpty {
-                    Divider()
-                    modelsSection
-                }
+                detailedUsageSection
             }
 
+            Divider()
+            languagePicker
             Divider()
             footer
         }
         .padding(14)
-        .frame(width: 340)
+        .frame(width: 360)
+        .id(model.language)
+    }
+
+    private var languagePicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.86)) {
+                    languageExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "globe")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Text(L10n.language)
+                        .font(.subheadline.weight(.medium))
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    Text(model.language.currentLabel)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.tertiary)
+                        .rotationEffect(.degrees(languageExpanded ? 90 : 0))
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if languageExpanded {
+                HStack(spacing: 8) {
+                    ForEach(LanguagePreference.allCases) { option in
+                        LanguageOptionButton(
+                            option: option,
+                            isSelected: model.language == option
+                        ) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                model.setLanguage(option)
+                            }
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
     }
 
     private var header: some View {
         HStack {
             VStack(alignment: .leading, spacing: 2) {
-                Text(model.snapshot.status == .ok ? model.snapshot.planName : L10n.appName)
-                    .font(.headline)
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(Color(red: 0.95, green: 0.55, blue: 0.20))
+                    Text(headerTitle)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
                 if model.snapshot.status == .ok, let email = model.snapshot.email {
                     Text(email)
                         .font(.caption)
@@ -50,67 +98,81 @@ struct MenuBarContent: View {
         }
     }
 
-    private var usageSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 14) {
+    private var headerTitle: String {
+        if model.snapshot.status == .ok {
+            return "Cursor · \(model.snapshot.planName)"
+        }
+        return L10n.appName
+    }
+
+    private var detailedUsageSection: some View {
+        let snapshot = model.snapshot
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 16) {
                 ProgressRing(
-                    progress: model.snapshot.totalPercentUsed ?? model.snapshot.apiPercentUsed,
-                    lineWidth: 9,
-                    size: 72
+                    progress: snapshot.totalPercentUsed ?? snapshot.apiPercentUsed,
+                    lineWidth: 10,
+                    size: 78
                 )
                 VStack(alignment: .leading, spacing: 8) {
-                    UsageBar(title: "Auto", fraction: model.snapshot.autoPercentUsed)
-                    UsageBar(title: "API", fraction: model.snapshot.apiPercentUsed)
+                    UsageBar(title: "Auto / Composer", fraction: snapshot.autoPercentUsed)
+                    UsageBar(title: "API / Named models", fraction: snapshot.apiPercentUsed)
+                    HStack {
+                        Text("\(L10n.t("Цикл до", "Cycle ends")) \(Formatters.shortDate(snapshot.billingCycleEnd))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text("\(L10n.resetIn) \(Formatters.daysUntilReset(snapshot.billingCycleEnd))")
+                            .font(.caption.weight(.semibold))
+                    }
                 }
             }
 
-            HStack {
-                labeled(L10n.resetIn, Formatters.daysUntilReset(model.snapshot.billingCycleEnd))
-                Spacer()
-                labeled(
-                    L10n.spent,
-                    Formatters.spendDisplay(
-                        totalSpend: model.snapshot.totalSpend,
-                        includedSpend: model.snapshot.includedSpend
-                    )
+            if let tokens = snapshot.tokenStats {
+                HStack(spacing: 10) {
+                    MetricChip(label: "Input", value: Formatters.compactNumber(tokens.inputTokens))
+                    MetricChip(label: "Output", value: Formatters.compactNumber(tokens.outputTokens))
+                    MetricChip(label: "Cache", value: Formatters.compactNumber(tokens.cacheReadTokens + tokens.cacheWriteTokens))
+                    MetricChip(label: L10n.t("Запросы", "Requests"), value: "\(tokens.eventCount)")
+                }
+            }
+
+            HStack(spacing: 10) {
+                MetricChip(
+                    label: L10n.t("В лимите", "Included"),
+                    value: Formatters.spendDisplay(totalSpend: snapshot.includedSpend, includedSpend: nil)
                 )
-                if model.snapshot.onDemandEnabled {
-                    Spacer()
-                    labeled(L10n.onDemand, Formatters.dollars(fromCents: model.snapshot.onDemandUsedCents))
+                MetricChip(
+                    label: L10n.spent,
+                    value: Formatters.spendDisplay(totalSpend: snapshot.totalSpend, includedSpend: nil)
+                )
+                if snapshot.onDemandEnabled {
+                    MetricChip(
+                        label: L10n.onDemand,
+                        value: Formatters.dollars(fromCents: snapshot.onDemandUsedCents)
+                    )
                 }
             }
-            .font(.caption)
-        }
-    }
 
-    private func tokensSection(_ tokens: TokenStats) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(L10n.tokensCycle)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            HStack {
-                labeled("In", Formatters.compactNumber(tokens.inputTokens))
-                labeled("Out", Formatters.compactNumber(tokens.outputTokens))
-                labeled("Cache", Formatters.compactNumber(tokens.cacheReadTokens + tokens.cacheWriteTokens))
-                labeled("Req", "\(tokens.eventCount)")
-            }
-        }
-    }
-
-    private var modelsSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(L10n.topModels)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            ForEach(model.snapshot.topModels.prefix(4)) { model in
-                HStack {
-                    Text(Formatters.shortModelName(model.name))
-                        .font(.caption.monospaced())
-                        .lineLimit(1)
-                    Spacer()
-                    Text("\(model.requests)")
-                        .font(.caption.monospacedDigit())
+            if !snapshot.topModels.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(L10n.topModels)
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
+                    ForEach(snapshot.topModels.prefix(4)) { model in
+                        HStack {
+                            Text(Formatters.shortModelName(model.name))
+                                .font(.caption.monospaced())
+                                .lineLimit(1)
+                            Spacer()
+                            Text("\(model.requests)×")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Text(Formatters.compactNumber(model.tokens))
+                                .font(.caption.monospacedDigit())
+                                .frame(minWidth: 44, alignment: .trailing)
+                        }
+                    }
                 }
             }
         }
@@ -140,12 +202,6 @@ struct MenuBarContent: View {
         return "\(L10n.updated) \(Formatters.timeAgo(model.snapshot.fetchedAt))"
     }
 
-    private func labeled(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(title).font(.caption2).foregroundStyle(.secondary)
-            Text(value).font(.caption.weight(.semibold).monospacedDigit())
-        }
-    }
 }
 
 struct SettingsView: View {
@@ -154,11 +210,23 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section(L10n.language) {
+                Picker(L10n.language, selection: Binding(
+                    get: { model.language },
+                    set: { model.setLanguage($0) }
+                )) {
+                    Text(L10n.languageSystem).tag(LanguagePreference.system)
+                    Text("English").tag(LanguagePreference.english)
+                    Text("Русский").tag(LanguagePreference.russian)
+                }
+                .pickerStyle(.radioGroup)
+            }
+
             Section(L10n.status) {
                 LabeledContent(L10n.plan, value: model.snapshot.planName)
                 LabeledContent("Email", value: model.snapshot.email ?? "—")
                 LabeledContent(
-                    L10n.t("Сессия Cursor", "Cursor session"),
+                    L10n.cursorSession,
                     value: AccountConnection.hasLocalSession ? L10n.signedIn : L10n.notSignedIn
                 )
             }
@@ -204,6 +272,7 @@ struct SettingsView: View {
                 .foregroundStyle(.secondary)
         }
         .padding()
-        .frame(width: 440, height: 420)
+        .frame(width: 440, height: 460)
+        .id(model.language)
     }
 }

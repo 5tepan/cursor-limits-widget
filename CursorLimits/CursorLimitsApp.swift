@@ -34,8 +34,10 @@ final class AppModel: ObservableObject {
     @Published var snapshot: UsageSnapshot = SnapshotStore.load() ?? .empty
     @Published var isRefreshing = false
     @Published var lastError: String?
+    @Published var language: LanguagePreference = LanguageStore.preference
 
     private var timer: Timer?
+    private var languageObserver: NSObjectProtocol?
 
     var menuBarTitle: String {
         guard snapshot.status == .ok else { return "Cursor" }
@@ -45,7 +47,27 @@ final class AppModel: ObservableObject {
 
     init() {
         startTimer()
+        languageObserver = NotificationCenter.default.addObserver(
+            forName: LanguageStore.changeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.language = LanguageStore.preference
+            }
+        }
         Task { await refresh() }
+    }
+
+    deinit {
+        if let languageObserver {
+            NotificationCenter.default.removeObserver(languageObserver)
+        }
+    }
+
+    func setLanguage(_ value: LanguagePreference) {
+        language = value
+        LanguageStore.preference = value
     }
 
     func startTimer() {

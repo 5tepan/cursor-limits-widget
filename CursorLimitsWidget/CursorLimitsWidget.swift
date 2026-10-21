@@ -12,10 +12,16 @@ struct Provider: TimelineProvider {
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<UsageEntry>) -> Void) {
-        let snapshot = SnapshotStore.load() ?? UsageSnapshot.empty
+        var snapshot = SnapshotStore.load() ?? UsageSnapshot.empty
+        if snapshot.status == .missing {
+            // Host hasn't written yet / path mismatch — show a clearer empty state.
+            snapshot.errorMessage = L10n.runAppHint
+        }
         let entry = UsageEntry(date: Date(), snapshot: snapshot)
-        // Host app refreshes the snapshot; widget reloads every 15 minutes.
-        let next = Calendar.current.date(byAdding: .minute, value: 15, to: Date()) ?? Date().addingTimeInterval(900)
+        // Host app refreshes the snapshot; widget reloads frequently until data appears.
+        let minutes = snapshot.status == .ok ? 15 : 5
+        let next = Calendar.current.date(byAdding: .minute, value: minutes, to: Date())
+            ?? Date().addingTimeInterval(TimeInterval(minutes * 60))
         completion(Timeline(entries: [entry], policy: .after(next)))
     }
 }

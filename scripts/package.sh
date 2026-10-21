@@ -28,10 +28,17 @@ xcodebuild \
   build
 
 APP="$DERIVED/Build/Products/Release/${APP_NAME}.app"
+APPEX="$APP/Contents/PlugIns/CursorLimitsWidget.appex"
+HOST_ENTITLEMENTS="$ROOT/CursorLimits/CursorLimits.entitlements"
+WIDGET_ENTITLEMENTS="$ROOT/CursorLimitsWidget/CursorLimitsWidget.entitlements"
 test -d "$APP"
+test -d "$APPEX"
 
-echo "==> Signing (ad-hoc)"
-codesign --force --deep --sign - "$APP"
+echo "==> Signing"
+IDENTITY_HASH="$(security find-identity -v -p codesigning 2>/dev/null | grep 'Apple Development' | grep -v 'CSSMERR' | head -1 | awk '{print $2}' || true)"
+SIGN_ID="${IDENTITY_HASH:--}"
+codesign --force --sign "$SIGN_ID" --entitlements "$WIDGET_ENTITLEMENTS" "$APPEX"
+codesign --force --sign "$SIGN_ID" --entitlements "$HOST_ENTITLEMENTS" "$APP"
 
 echo "==> Staging zip contents"
 STAGE="$DIST/stage"

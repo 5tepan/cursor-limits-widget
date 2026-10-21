@@ -1,9 +1,9 @@
 import Foundation
 
-/// Tiny locale switcher: Russian when system language is `ru`, otherwise English.
+/// App strings. Language follows `LanguageStore.preference` (System / English / Russian).
 enum L10n {
     static var isRussian: Bool {
-        Locale.current.language.languageCode?.identifier == "ru"
+        LanguageStore.isRussian
     }
 
     static func t(_ ru: String, _ en: String) -> String {
@@ -71,6 +71,9 @@ enum L10n {
     static var openDataFolder: String { t("Открыть папку данных", "Open data folder") }
     static var launchAtLogin: String { t("Запускать при входе в систему", "Launch at login") }
     static var howToConnect: String { t("Как подключить аккаунт", "How to connect") }
+    static var language: String { t("Язык", "Language") }
+    static var languageSystem: String { t("Как в системе", "Match system") }
+    static var cursorSession: String { t("Сессия Cursor", "Cursor session") }
     static var widgetHint: String {
         t(
             "Виджет: ПКМ на рабочем столе → «Редактировать виджеты» → Cursor Limits.",
