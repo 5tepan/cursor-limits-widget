@@ -31,7 +31,9 @@ xcuserdata/
 secrets/
 credentials/
 **/snapshot.json
+**/app-snapshot.json
 **/preferences.json
+**/diagnostics.json
 **/state.vscdb
 **/state.vscdb-*
 *.token

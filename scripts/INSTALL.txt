@@ -7,12 +7,15 @@ English
 2. Double-click Install.command  (or drag CursorLimits.app into Applications).
 3. If macOS blocks the app: right-click CursorLimits.app → Open → Open.
    Or in Terminal:  xattr -dr com.apple.quarantine /Applications/CursorLimits.app
-4. Open Cursor and sign in to your account.
-5. Click the menu bar icon → “Check connection”.
+4. Sign in to the tools you use on this Mac
+   (Cursor / Claude CLI / Codex / OpenCode / gh auth login — as needed).
+5. Click the menu bar icon → refresh. Open Settings (gear) to enable providers
+   and choose the primary source for the widget.
 6. Right-click desktop → Edit Widgets → add Cursor Limits.
    (App must live in /Applications; wait a few seconds if it doesn’t show yet.)
 
-You never paste tokens. The app only reads the Cursor session already on this Mac.
+You never paste API tokens into this app. It reads local sessions and talks only
+to each provider’s official API. Usage data stays on this Mac.
 
 
 Русский
@@ -21,9 +24,11 @@ You never paste tokens. The app only reads the Cursor session already on this Ma
 2. Дважды нажмите Install.command  (или перетащите CursorLimits.app в Программы).
 3. Если macOS блокирует: ПКМ по CursorLimits.app → Открыть → Открыть.
    Или в Терминале:  xattr -dr com.apple.quarantine /Applications/CursorLimits.app
-4. Откройте Cursor и войдите в аккаунт.
-5. Нажмите иконку в меню-баре → «Проверить подключение».
+4. Войдите в нужные инструменты на этом Mac
+   (Cursor / Claude CLI / Codex / OpenCode / gh auth login — по необходимости).
+5. Иконка в меню-баре → обновить. Шестерёнка → Настройки: провайдеры и primary.
 6. ПКМ на рабочем столе → Редактировать виджеты → Cursor Limits.
    (Приложение должно быть в /Программы; если не видно — подождите несколько секунд.)
 
-Токены вставлять не нужно — приложение читает локальную сессию Cursor на этом Mac.
+Токены в это приложение вставлять не нужно — читаются локальные сессии,
+запросы идут только на официальные API. Данные usage остаются на этом Mac.
