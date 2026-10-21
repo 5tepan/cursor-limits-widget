@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import WidgetKit
 
@@ -10,13 +11,7 @@ struct CursorLimitsApp: App {
             MenuBarContent(model: model)
         } label: {
             HStack(spacing: 5) {
-                MenuBarGlyph(
-                    fraction: model.snapshot.status == .ok
-                        ? (model.snapshot.totalPercentUsed
-                            ?? model.snapshot.apiPercentUsed
-                            ?? model.snapshot.autoPercentUsed)
-                        : nil
-                )
+                MenuBarGlyph(fraction: model.menuBarFraction)
                 Text(model.menuBarTitle)
                     .font(.system(size: 12, weight: .medium, design: .rounded))
             }
@@ -31,28 +26,39 @@ struct CursorLimitsApp: App {
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var snapshot: UsageSnapshot = SnapshotStore.load() ?? .empty
+    @Published var snapshot: AppSnapshot = AppSnapshotStore.load() ?? .empty
+    @Published var preferences: AppPreferences = AppPreferencesStore.load()
     @Published var isRefreshing = false
     @Published var lastError: String?
     @Published var language: LanguagePreference = LanguageStore.preference
+    @Published var copilotDeviceCode: String?
+    @Published var copilotVerifyURL: URL?
+    @Published var isConnectingCopilot = false
 
     private var timer: Timer?
-    private var languageObserver: NSObjectProtocol?
+    private var prefsObserver: NSObjectProtocol?
+
+    var menuBarFraction: Double? {
+        guard let primary = snapshot.primary, primary.status == .ok else { return nil }
+        return primary.primaryFraction
+    }
 
     var menuBarTitle: String {
-        guard snapshot.status == .ok else { return "Cursor" }
-        let fraction = snapshot.totalPercentUsed ?? snapshot.apiPercentUsed ?? snapshot.autoPercentUsed
-        return Formatters.percent(fraction)
+        guard let primary = snapshot.primary, primary.status == .ok else {
+            return "Limits"
+        }
+        return Formatters.percent(primary.primaryFraction)
     }
 
     init() {
         startTimer()
-        languageObserver = NotificationCenter.default.addObserver(
-            forName: LanguageStore.changeNotification,
+        prefsObserver = NotificationCenter.default.addObserver(
+            forName: AppPreferencesStore.changeNotification,
             object: nil,
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
+                self?.preferences = AppPreferencesStore.load()
                 self?.language = LanguageStore.preference
             }
         }
@@ -60,14 +66,42 @@ final class AppModel: ObservableObject {
     }
 
     deinit {
-        if let languageObserver {
-            NotificationCenter.default.removeObserver(languageObserver)
+        if let prefsObserver {
+            NotificationCenter.default.removeObserver(prefsObserver)
         }
     }
 
     func setLanguage(_ value: LanguagePreference) {
         language = value
         LanguageStore.preference = value
+        preferences = AppPreferencesStore.load()
+    }
+
+    func setProviderEnabled(_ id: ProviderID, enabled: Bool) {
+        AppPreferencesStore.update { prefs in
+            if enabled {
+                if !prefs.enabledProviderIDs.contains(id) {
+                    prefs.enabledProviderIDs.append(id)
+                }
+            } else {
+                prefs.enabledProviderIDs.removeAll { $0 == id }
+                if prefs.enabledProviderIDs.isEmpty {
+                    prefs.enabledProviderIDs = [.cursor]
+                }
+                if prefs.primaryProviderID == id {
+                    prefs.primaryProviderID = prefs.enabledProviderIDs[0]
+                }
+            }
+        }
+        preferences = AppPreferencesStore.load()
+        Task { await refresh() }
+    }
+
+    func setPrimaryProvider(_ id: ProviderID) {
+        AppPreferencesStore.update { $0.primaryProviderID = id }
+        preferences = AppPreferencesStore.load()
+        WidgetCenter.shared.reloadAllTimelines()
+        objectWillChange.send()
     }
 
     func startTimer() {
@@ -84,15 +118,38 @@ final class AppModel: ObservableObject {
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let next = await UsageRefresher.refresh()
+        let next = await MultiProviderRefresher.refresh(preferences: preferences)
         snapshot = next
-        lastError = next.status == .ok ? nil : next.errorMessage
+        lastError = next.providers.first(where: { $0.status == .error })?.errorMessage
+            ?? next.primary.flatMap { $0.status == .ok ? nil : $0.errorMessage }
 
         do {
-            try SnapshotStore.save(next)
+            try AppSnapshotStore.save(next)
             WidgetCenter.shared.reloadAllTimelines()
         } catch {
             lastError = error.localizedDescription
+        }
+    }
+
+    func connectCopilot() async {
+        isConnectingCopilot = true
+        defer { isConnectingCopilot = false }
+        do {
+            let code = try await GitHubDeviceFlow.requestDeviceCode()
+            copilotDeviceCode = code.user_code
+            copilotVerifyURL = URL(string: code.verification_uri)
+            if let url = copilotVerifyURL {
+                NSWorkspace.shared.open(url)
+            }
+            _ = try await GitHubDeviceFlow.pollAccessToken(
+                deviceCode: code.device_code,
+                interval: code.interval
+            )
+            copilotDeviceCode = nil
+            await refresh()
+        } catch {
+            lastError = error.localizedDescription
+            copilotDeviceCode = nil
         }
     }
 }

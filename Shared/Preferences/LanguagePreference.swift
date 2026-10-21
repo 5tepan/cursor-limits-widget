@@ -1,5 +1,4 @@
 import Foundation
-import WidgetKit
 
 enum LanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
     case system
@@ -16,7 +15,6 @@ enum LanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// Compact badge on the collapsed language row.
     var currentLabel: String {
         switch self {
         case .system: return L10n.t("Авто", "Auto")
@@ -58,71 +56,23 @@ enum LanguagePreference: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
+/// Compatibility façade over AppPreferencesStore.language
 enum LanguageStore {
-    private static let fileName = "preferences.json"
-    private static let didChange = Notification.Name("CursorLimitsLanguageDidChange")
-
-    private struct FilePayload: Codable {
-        var language: String
-    }
-
-    private static var candidateURLs: [URL] {
-        var seen = Set<String>()
-        var urls: [URL] = []
-        for dir in [
-            SnapshotStore.processApplicationSupportDirectoryURL,
-            SnapshotStore.widgetContainerDirectoryURL,
-            SnapshotStore.applicationSupportDirectoryURL
-        ] {
-            let url = dir.appendingPathComponent(fileName)
-            if seen.insert(url.path).inserted {
-                urls.append(url)
-            }
-        }
-        return urls
-    }
+    static var changeNotification: Notification.Name { AppPreferencesStore.changeNotification }
 
     static var preference: LanguagePreference {
-        get { load() }
+        get { AppPreferencesStore.load().language }
         set {
-            guard newValue != load() else { return }
-            save(newValue)
-            NotificationCenter.default.post(name: didChange, object: newValue.rawValue)
-            WidgetCenter.shared.reloadAllTimelines()
+            AppPreferencesStore.update { $0.language = newValue }
         }
     }
 
     static var isRussian: Bool {
         switch preference {
-        case .russian:
-            return true
-        case .english:
-            return false
+        case .russian: return true
+        case .english: return false
         case .system:
             return Locale.current.language.languageCode?.identifier == "ru"
-        }
-    }
-
-    static var changeNotification: Notification.Name { didChange }
-
-    private static func load() -> LanguagePreference {
-        for url in candidateURLs {
-            guard FileManager.default.fileExists(atPath: url.path),
-                  let data = try? Data(contentsOf: url),
-                  let payload = try? JSONDecoder().decode(FilePayload.self, from: data),
-                  let value = LanguagePreference(rawValue: payload.language)
-            else { continue }
-            return value
-        }
-        return .system
-    }
-
-    private static func save(_ value: LanguagePreference) {
-        try? SnapshotStore.ensureDirectory()
-        let payload = FilePayload(language: value.rawValue)
-        guard let data = try? JSONEncoder().encode(payload) else { return }
-        for url in candidateURLs {
-            try? data.write(to: url, options: .atomic)
         }
     }
 }

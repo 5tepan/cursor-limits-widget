@@ -33,8 +33,9 @@ struct OnboardingView: View {
                 )
             }
 
-            if let message = model.snapshot.errorMessage ?? model.lastError,
-               model.snapshot.status == .error
+            if let message = model.lastError
+                ?? model.snapshot.primary?.errorMessage,
+               !message.isEmpty
             {
                 Text(message)
                     .font(.caption2)

@@ -3,12 +3,13 @@ import SwiftUI
 struct WidgetChrome<Content: View>: View {
     var title: String
     var subtitle: String?
+    var symbolName: String = "sparkles"
     @ViewBuilder var content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Image(systemName: "sparkles")
+                Image(systemName: symbolName)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(Color(red: 0.95, green: 0.55, blue: 0.20))
                 Text(title)
@@ -41,114 +42,134 @@ struct WidgetChrome<Content: View>: View {
 }
 
 struct SmallUsageView: View {
-    var snapshot: UsageSnapshot
+    var snapshot: AppSnapshot
+
+    private var usage: ProviderUsage? { snapshot.primary }
 
     var body: some View {
-        WidgetChrome(title: snapshot.planName, subtitle: Formatters.daysUntilReset(snapshot.billingCycleEnd)) {
-            if snapshot.status != .ok {
-                StatusPlaceholder(snapshot: snapshot)
-            } else {
+        let reset = usage?.windows.compactMap(\.resetsAt).max()
+        WidgetChrome(
+            title: usage?.planName ?? L10n.appName,
+            subtitle: Formatters.daysUntilReset(reset),
+            symbolName: usage?.providerID.symbolName ?? "sparkles"
+        ) {
+            if let usage, usage.status == .ok {
                 HStack(spacing: 12) {
-                    ProgressRing(progress: primaryFraction, lineWidth: 7, size: 58)
+                    ProgressRing(progress: usage.primaryFraction, lineWidth: 7, size: 58)
                     VStack(alignment: .leading, spacing: 4) {
-                        Text(primaryLabel)
+                        Text(primaryLabel(usage))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
-                        Text(Formatters.percent(primaryFraction))
+                        Text(Formatters.percent(usage.primaryFraction))
                             .font(.title3.weight(.bold).monospacedDigit())
-                        Text("\(L10n.resetIn) \(Formatters.daysUntilReset(snapshot.billingCycleEnd))")
+                        Text("\(L10n.resetIn) \(Formatters.daysUntilReset(reset))")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .lineLimit(2)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            } else {
+                StatusPlaceholder(usage: usage)
             }
         }
     }
 
-    private var primaryFraction: Double? {
-        snapshot.totalPercentUsed ?? snapshot.apiPercentUsed ?? snapshot.autoPercentUsed
-    }
-
-    private var primaryLabel: String {
-        if snapshot.totalPercentUsed != nil { return "Всего" }
-        if snapshot.apiPercentUsed != nil { return "API" }
-        return "Auto"
+    private func primaryLabel(_ usage: ProviderUsage) -> String {
+        usage.windows.first?.label ?? usage.providerID.displayName
     }
 }
 
 struct MediumUsageView: View {
-    var snapshot: UsageSnapshot
+    var snapshot: AppSnapshot
+
+    private var usage: ProviderUsage? { snapshot.primary }
 
     var body: some View {
         WidgetChrome(
-            title: snapshot.planName,
-            subtitle: snapshot.fetchedAt == .distantPast ? nil : Formatters.timeAgo(snapshot.fetchedAt)
+            title: usage.map { "\($0.providerID.displayName) · \($0.planName)" } ?? L10n.appName,
+            subtitle: snapshot.fetchedAt == .distantPast ? nil : Formatters.timeAgo(snapshot.fetchedAt),
+            symbolName: usage?.providerID.symbolName ?? "sparkles"
         ) {
-            if snapshot.status != .ok {
-                StatusPlaceholder(snapshot: snapshot)
-            } else {
+            if let usage, usage.status == .ok {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack(alignment: .center, spacing: 14) {
-                        ProgressRing(progress: snapshot.totalPercentUsed ?? snapshot.apiPercentUsed, lineWidth: 8, size: 62)
+                        ProgressRing(progress: usage.primaryFraction, lineWidth: 8, size: 62)
                         VStack(alignment: .leading, spacing: 8) {
-                            UsageBar(title: "Auto", fraction: snapshot.autoPercentUsed)
-                            UsageBar(title: "API", fraction: snapshot.apiPercentUsed)
+                            ForEach(usage.windows.prefix(3)) { window in
+                                UsageBar(title: window.label, fraction: window.fraction)
+                            }
                         }
                     }
 
                     HStack(spacing: 12) {
-                        MetricChip(label: L10n.resetIn, value: Formatters.daysUntilReset(snapshot.billingCycleEnd))
-                        MetricChip(label: L10n.spent, value: Formatters.spendDisplay(totalSpend: snapshot.totalSpend, includedSpend: snapshot.includedSpend))
-                        if snapshot.onDemandEnabled {
+                        let reset = usage.windows.compactMap(\.resetsAt).max()
+                        MetricChip(label: L10n.resetIn, value: Formatters.daysUntilReset(reset))
+                        if usage.totalSpend != nil || usage.includedSpend != nil {
+                            MetricChip(
+                                label: L10n.spent,
+                                value: Formatters.spendDisplay(
+                                    totalSpend: usage.totalSpend,
+                                    includedSpend: usage.includedSpend
+                                )
+                            )
+                        }
+                        if usage.onDemandEnabled {
                             MetricChip(
                                 label: L10n.onDemand,
-                                value: Formatters.dollars(fromCents: snapshot.onDemandUsedCents)
+                                value: Formatters.dollars(fromCents: usage.onDemandUsedCents)
                             )
-                        } else if let tokens = snapshot.tokenStats {
+                        } else if let tokens = usage.tokenStats {
                             MetricChip(label: L10n.t("Токены", "Tokens"), value: Formatters.compactNumber(tokens.totalTokens))
+                        } else if let fraction = usage.primaryFraction {
+                            MetricChip(label: L10n.t("Использовано", "Used"), value: Formatters.percent(fraction))
                         }
                     }
                 }
+            } else {
+                StatusPlaceholder(usage: usage)
             }
         }
     }
 }
 
 struct LargeUsageView: View {
-    var snapshot: UsageSnapshot
+    var snapshot: AppSnapshot
+
+    private var usage: ProviderUsage? { snapshot.primary }
 
     var body: some View {
         WidgetChrome(
-            title: "Cursor · \(snapshot.planName)",
-            subtitle: snapshot.email
+            title: usage.map { "\($0.providerID.displayName) · \($0.planName)" } ?? L10n.appName,
+            subtitle: usage?.email,
+            symbolName: usage?.providerID.symbolName ?? "sparkles"
         ) {
-            if snapshot.status != .ok {
-                StatusPlaceholder(snapshot: snapshot)
-            } else {
+            if let usage, usage.status == .ok {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 16) {
                         ProgressRing(
-                            progress: snapshot.totalPercentUsed ?? snapshot.apiPercentUsed,
+                            progress: usage.primaryFraction,
                             lineWidth: 10,
                             size: 78
                         )
                         VStack(alignment: .leading, spacing: 8) {
-                            UsageBar(title: "Auto / Composer", fraction: snapshot.autoPercentUsed)
-                            UsageBar(title: "API / Named models", fraction: snapshot.apiPercentUsed)
-                            HStack {
-                                Text("\(L10n.t("Цикл до", "Cycle ends")) \(Formatters.shortDate(snapshot.billingCycleEnd))")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Spacer()
-                                Text("\(L10n.resetIn) \(Formatters.daysUntilReset(snapshot.billingCycleEnd))")
-                                    .font(.caption.weight(.semibold))
+                            ForEach(usage.windows) { window in
+                                UsageBar(title: windowLabel(window), fraction: window.fraction)
+                            }
+                            if let reset = usage.windows.compactMap(\.resetsAt).max() {
+                                HStack {
+                                    Text("\(L10n.t("Цикл до", "Cycle ends")) \(Formatters.shortDate(reset))")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Spacer()
+                                    Text("\(L10n.resetIn) \(Formatters.daysUntilReset(reset))")
+                                        .font(.caption.weight(.semibold))
+                                }
                             }
                         }
                     }
 
-                    if let tokens = snapshot.tokenStats {
+                    if let tokens = usage.tokenStats {
                         HStack(spacing: 10) {
                             MetricChip(label: "Input", value: Formatters.compactNumber(tokens.inputTokens))
                             MetricChip(label: "Output", value: Formatters.compactNumber(tokens.outputTokens))
@@ -157,29 +178,31 @@ struct LargeUsageView: View {
                         }
                     }
 
-                    HStack(spacing: 10) {
-                        MetricChip(
-                            label: L10n.t("В лимите", "Included"),
-                            value: Formatters.spendDisplay(totalSpend: snapshot.includedSpend, includedSpend: nil)
-                        )
-                        MetricChip(
-                            label: L10n.spent,
-                            value: Formatters.spendDisplay(totalSpend: snapshot.totalSpend, includedSpend: nil)
-                        )
-                        if snapshot.onDemandEnabled {
+                    if usage.includedSpend != nil || usage.totalSpend != nil || usage.onDemandEnabled {
+                        HStack(spacing: 10) {
                             MetricChip(
-                                label: L10n.onDemand,
-                                value: Formatters.dollars(fromCents: snapshot.onDemandUsedCents)
+                                label: L10n.t("В лимите", "Included"),
+                                value: Formatters.spendDisplay(totalSpend: usage.includedSpend, includedSpend: nil)
                             )
+                            MetricChip(
+                                label: L10n.spent,
+                                value: Formatters.spendDisplay(totalSpend: usage.totalSpend, includedSpend: nil)
+                            )
+                            if usage.onDemandEnabled {
+                                MetricChip(
+                                    label: L10n.onDemand,
+                                    value: Formatters.dollars(fromCents: usage.onDemandUsedCents)
+                                )
+                            }
                         }
                     }
 
-                    if !snapshot.topModels.isEmpty {
+                    if !usage.topModels.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(L10n.topModels)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                            ForEach(snapshot.topModels.prefix(4)) { model in
+                            ForEach(usage.topModels.prefix(4)) { model in
                                 HStack {
                                     Text(Formatters.shortModelName(model.name))
                                         .font(.caption.monospaced())
@@ -196,11 +219,36 @@ struct LargeUsageView: View {
                         }
                     }
 
+                    // Compact strip of other enabled providers
+                    let others = snapshot.providers.filter {
+                        $0.providerID != usage.providerID && $0.status == .ok
+                    }
+                    if !others.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(others.prefix(4)) { other in
+                                MetricChip(
+                                    label: other.providerID.displayName,
+                                    value: Formatters.percent(other.primaryFraction)
+                                )
+                            }
+                        }
+                    }
+
                     Text("\(L10n.updated) \(Formatters.timeAgo(snapshot.fetchedAt))")
                         .font(.caption2)
                         .foregroundStyle(.tertiary)
                 }
+            } else {
+                StatusPlaceholder(usage: usage)
             }
+        }
+    }
+
+    private func windowLabel(_ window: UsageWindow) -> String {
+        switch window.label {
+        case "Auto": return "Auto / Composer"
+        case "API": return "API / Named models"
+        default: return window.label
         }
     }
 }

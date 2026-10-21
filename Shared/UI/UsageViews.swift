@@ -76,7 +76,7 @@ struct MetricChip: View {
 }
 
 struct StatusPlaceholder: View {
-    var snapshot: UsageSnapshot
+    var usage: ProviderUsage?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -90,15 +90,18 @@ struct StatusPlaceholder: View {
     }
 
     private var title: String {
-        switch snapshot.status {
+        switch usage?.status {
         case .authMissing: return L10n.notSignedIn
         case .error: return L10n.errorTitle
-        case .missing: return L10n.noDataTitle
+        case .missing, .none: return L10n.noDataTitle
         case .ok: return "OK"
         }
     }
 
     private var message: String {
-        snapshot.errorMessage ?? L10n.runAppHint
+        if let usage {
+            return ProviderErrorCopy.shortStatus(for: usage, enabled: true)
+        }
+        return L10n.runAppHint
     }
 }

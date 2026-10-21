@@ -7,19 +7,22 @@ struct Provider: TimelineProvider {
     }
 
     func getSnapshot(in context: Context, completion: @escaping (UsageEntry) -> Void) {
-        let snapshot = SnapshotStore.load() ?? .preview
+        let snapshot = AppSnapshotStore.load() ?? .preview
         completion(UsageEntry(date: Date(), snapshot: snapshot))
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<UsageEntry>) -> Void) {
-        var snapshot = SnapshotStore.load() ?? UsageSnapshot.empty
-        if snapshot.status == .missing {
-            // Host hasn't written yet / path mismatch — show a clearer empty state.
-            snapshot.errorMessage = L10n.runAppHint
+        var snapshot = AppSnapshotStore.load() ?? AppSnapshot.empty
+        if snapshot.primary?.status == .missing || snapshot.providers.isEmpty {
+            // Host hasn't written yet — keep empty state clear.
+            if var primary = snapshot.primary {
+                primary.errorMessage = L10n.runAppHint
+                snapshot.providers = [primary]
+            }
         }
         let entry = UsageEntry(date: Date(), snapshot: snapshot)
-        // Host app refreshes the snapshot; widget reloads frequently until data appears.
-        let minutes = snapshot.status == .ok ? 15 : 5
+        let ok = snapshot.primary?.status == .ok
+        let minutes = ok ? 15 : 5
         let next = Calendar.current.date(byAdding: .minute, value: minutes, to: Date())
             ?? Date().addingTimeInterval(TimeInterval(minutes * 60))
         completion(Timeline(entries: [entry], policy: .after(next)))
@@ -28,7 +31,7 @@ struct Provider: TimelineProvider {
 
 struct UsageEntry: TimelineEntry {
     let date: Date
-    let snapshot: UsageSnapshot
+    let snapshot: AppSnapshot
 }
 
 struct CursorLimitsWidgetEntryView: View {
@@ -57,7 +60,10 @@ struct CursorLimitsWidget: Widget {
             CursorLimitsWidgetEntryView(entry: entry)
         }
         .configurationDisplayName("Cursor Limits")
-        .description("Лимиты подписки Cursor, токены и сброс цикла.")
+        .description(L10n.t(
+            "Лимиты Cursor, Claude, Codex, OpenCode Go и Copilot.",
+            "Usage limits for Cursor, Claude, Codex, OpenCode Go, and Copilot."
+        ))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
     }
 }
@@ -69,43 +75,44 @@ struct CursorLimitsWidgetBundle: WidgetBundle {
     }
 }
 
-extension UsageSnapshot {
-    static var preview: UsageSnapshot {
-        UsageSnapshot(
+extension AppSnapshot {
+    static var preview: AppSnapshot {
+        AppSnapshot(
             fetchedAt: Date(),
-            email: "you@example.com",
-            planName: "Pro",
-            membershipType: "pro",
-            billingCycleStart: Calendar.current.date(byAdding: .day, value: -12, to: Date()),
-            billingCycleEnd: Calendar.current.date(byAdding: .day, value: 18, to: Date()),
-            autoPercentUsed: 0.42,
-            apiPercentUsed: 0.67,
-            totalPercentUsed: 0.55,
-            planUsed: 110,
-            planLimit: 200,
-            planRemaining: 90,
-            includedSpend: 11.2,
-            totalSpend: 14.8,
-            bonusSpend: 0,
-            onDemandEnabled: true,
-            onDemandUsedCents: 320,
-            onDemandLimitCents: 2000,
-            displayMessage: nil,
-            tokenStats: TokenStats(
-                inputTokens: 1_240_000,
-                outputTokens: 380_000,
-                cacheReadTokens: 4_200_000,
-                cacheWriteTokens: 910_000,
-                eventCount: 186,
-                chargedCents: 1480
-            ),
-            topModels: [
-                ModelUsage(name: "composer-2", requests: 92, tokens: 2_100_000, chargedCents: 420),
-                ModelUsage(name: "claude-4.6-sonnet", requests: 41, tokens: 1_800_000, chargedCents: 610),
-                ModelUsage(name: "gpt-5.3", requests: 28, tokens: 900_000, chargedCents: 280)
+            providers: [
+                ProviderUsage(
+                    providerID: .cursor,
+                    status: .ok,
+                    planName: "Pro",
+                    email: "you@example.com",
+                    windows: [
+                        UsageWindow(label: "Auto", fraction: 0.42, resetsAt: Calendar.current.date(byAdding: .day, value: 18, to: Date())),
+                        UsageWindow(label: "API", fraction: 0.67, resetsAt: Calendar.current.date(byAdding: .day, value: 18, to: Date()))
+                    ],
+                    displayMessage: nil,
+                    errorMessage: nil,
+                    fetchedAt: Date(),
+                    tokenStats: TokenStats(
+                        inputTokens: 1_240_000,
+                        outputTokens: 380_000,
+                        cacheReadTokens: 4_200_000,
+                        cacheWriteTokens: 910_000,
+                        eventCount: 186,
+                        chargedCents: 1480
+                    ),
+                    topModels: [
+                        ModelUsage(name: "composer-2", requests: 92, tokens: 2_100_000, chargedCents: 420),
+                        ModelUsage(name: "claude-4.6-sonnet", requests: 41, tokens: 1_800_000, chargedCents: 610),
+                        ModelUsage(name: "gpt-5.3", requests: 28, tokens: 900_000, chargedCents: 280)
+                    ],
+                    includedSpend: 11.2,
+                    totalSpend: 14.8,
+                    onDemandEnabled: true,
+                    onDemandUsedCents: 320
+                )
             ],
-            status: .ok,
-            errorMessage: nil
+            enabledProviderIDs: AppPreferencesStore.defaultEnabled,
+            primaryProviderID: .cursor
         )
     }
 }

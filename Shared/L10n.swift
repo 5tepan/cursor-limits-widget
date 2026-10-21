@@ -26,10 +26,26 @@ enum L10n {
     static var connectTitle: String { t("Подключение аккаунта", "Connect your account") }
     static var connectSafeNote: String {
         t(
-            "Токены никуда не отправляются и не хранятся отдельно — приложение читает локальную сессию Cursor на этом Mac.",
-            "No tokens are pasted or uploaded. The app reads your local Cursor session on this Mac."
+            "Токены никуда не отправляются — приложение читает локальные сессии на этом Mac и ходит только на официальные API провайдеров.",
+            "No tokens are uploaded — the app reads local sessions on this Mac and only calls each provider’s official API."
         )
     }
+    static var providers: String { t("Провайдеры", "Providers") }
+    static var primaryProvider: String { t("Основной для виджета", "Primary for widget") }
+    static var connectGitHub: String { t("Подключить GitHub (Copilot)", "Connect GitHub (Copilot)") }
+    static var waitingGitHub: String { t("Ожидание подтверждения…", "Waiting for confirmation…") }
+    static var githubUserCode: String { t("Код", "Code") }
+    static var errorDetails: String { t("Подробности", "Details") }
+    static var errorLogTitle: String { t("Журнал ошибок", "Error log") }
+    static var errorLogSafeNote: String {
+        t(
+            "Только на этом Mac. Ключи и токены вырезаются. Никуда не отправляется.",
+            "Stored only on this Mac. Keys and tokens are redacted. Nothing is uploaded."
+        )
+    }
+    static var clearErrorLog: String { t("Очистить", "Clear") }
+    static var copyErrorLog: String { t("Копировать", "Copy") }
+    static var noErrorLog: String { t("Записей пока нет.", "No entries yet.") }
     static var step1: String {
         t("1. Установите и откройте Cursor", "1. Install and open Cursor")
     }
