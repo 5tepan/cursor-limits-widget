@@ -1,0 +1,27 @@
+Cursor Limits — install
+=======================
+
+English
+-------
+1. Unzip this archive.
+2. Double-click Install.command  (or drag CursorLimits.app into Applications).
+3. If macOS blocks the app: right-click CursorLimits.app → Open → Open.
+   Or in Terminal:  xattr -dr com.apple.quarantine /Applications/CursorLimits.app
+4. Open Cursor and sign in to your account.
+5. Click the menu bar icon → “Check connection”.
+6. Optional: right-click desktop → Edit Widgets → add Cursor Limits.
+
+You never paste tokens. The app only reads the Cursor session already on this Mac.
+
+
+Русский
+-------
+1. Распакуйте архив.
+2. Дважды нажмите Install.command  (или перетащите CursorLimits.app в Программы).
+3. Если macOS блокирует: ПКМ по CursorLimits.app → Открыть → Открыть.
+   Или в Терминале:  xattr -dr com.apple.quarantine /Applications/CursorLimits.app
+4. Откройте Cursor и войдите в аккаунт.
+5. Нажмите иконку в меню-баре → «Проверить подключение».
+6. Опционально: ПКМ на рабочем столе → Редактировать виджеты → Cursor Limits.
+
+Токены вставлять не нужно — приложение читает локальную сессию Cursor на этом Mac.

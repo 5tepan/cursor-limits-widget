@@ -1,0 +1,68 @@
+name: CursorLimits
+options:
+  bundleIdPrefix: com.local
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+  developmentLanguage: en
+  groupSortPosition: top
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+    ENABLE_HARDENED_RUNTIME: NO
+
+targets:
+  CursorLimits:
+    type: application
+    platform: macOS
+    sources:
+      - path: Shared
+      - path: CursorLimits
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimits
+        PRODUCT_NAME: CursorLimits
+        INFOPLIST_FILE: CursorLimits/Info.plist
+        CODE_SIGN_ENTITLEMENTS: CursorLimits/CursorLimits.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks"
+        COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_APP_SANDBOX: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"
+    dependencies:
+      - target: CursorLimitsWidget
+        embed: true
+        codeSign: true
+    scheme:
+      testTargets: []
+
+  CursorLimitsWidget:
+    type: app-extension
+    platform: macOS
+    sources:
+      - path: Shared
+      - path: CursorLimitsWidget
+        excludes:
+          - Info.plist
+          - "*.entitlements"
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimits.widget
+        PRODUCT_NAME: CursorLimitsWidget
+        INFOPLIST_FILE: CursorLimitsWidget/Info.plist
+        CODE_SIGN_ENTITLEMENTS: CursorLimitsWidget/CursorLimitsWidget.entitlements
+        LD_RUNPATH_SEARCH_PATHS: "@executable_path/../Frameworks @executable_path/../../../../Frameworks"
+        SKIP_INSTALL: YES
+        GENERATE_INFOPLIST_FILE: NO
+        ENABLE_APP_SANDBOX: NO
+        MARKETING_VERSION: "1.0.0"
+        CURRENT_PROJECT_VERSION: "1"

@@ -1,0 +1,53 @@
+# Build artifacts (contain absolute local paths)
+DerivedData/
+DerivedData-Release/
+dist/
+build/
+.build/
+*.xcarchive
+
+# Xcode user / generated state
+*.xcodeproj/
+!project.yml
+*.xcworkspace/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# Secrets & local runtime data — never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.mobileprovision
+secrets/
+credentials/
+**/snapshot.json
+**/state.vscdb
+**/state.vscdb-*
+*.token
+*.cookie
+*credentials*.json
+WorkosCursorSessionToken*
+
+# OS / editor junk
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs & crash dumps
+*.log
+*.crash
