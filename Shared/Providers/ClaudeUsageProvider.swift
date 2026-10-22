@@ -62,7 +62,7 @@ struct ClaudeUsageProvider: UsageProvider {
     }
 
     private static func normalizeUtilization(_ value: Double) -> Double {
-        let fraction = value > 1.5 ? value / 100.0 : value
+        let fraction = UsageFraction.normalize(value)
         return min(max(fraction, 0), 1)
     }
 
@@ -74,7 +74,7 @@ struct ClaudeUsageProvider: UsageProvider {
     }
 
     private static func readCredentialsFile() -> String? {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = AppPaths.realHomeURL
         let candidates = [
             home.appendingPathComponent(".claude/.credentials.json"),
             home.appendingPathComponent(".config/claude/.credentials.json")

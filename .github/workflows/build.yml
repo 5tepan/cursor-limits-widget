@@ -6,8 +6,31 @@ on:
   pull_request:
 
 jobs:
+  test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Unit tests
+        run: |
+          xcodebuild test \
+            -project CursorLimits.xcodeproj \
+            -scheme CursorLimits \
+            -destination 'platform=macOS' \
+            -derivedDataPath DerivedData-CI \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
   build:
     runs-on: macos-14
+    needs: test
     steps:
       - uses: actions/checkout@v4
 

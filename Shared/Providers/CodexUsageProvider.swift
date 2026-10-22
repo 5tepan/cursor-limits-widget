@@ -62,8 +62,7 @@ struct CodexUsageProvider: UsageProvider {
     }
 
     private static func authFileURL() -> URL {
-        FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex/auth.json")
+        AppPaths.realHomeURL.appendingPathComponent(".codex/auth.json")
     }
 
     private static func loadAuthJSON() -> [String: Any]? {
@@ -104,7 +103,7 @@ struct CodexUsageProvider: UsageProvider {
         var usedFraction: Double? {
             guard let used_percent else { return nil }
             // API may return 0...100 or 0...1
-            return used_percent > 1.5 ? used_percent / 100.0 : used_percent
+            return UsageFraction.normalize(used_percent)
         }
 
         var resetDate: Date? {

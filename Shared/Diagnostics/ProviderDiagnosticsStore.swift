@@ -12,29 +12,35 @@ struct ProviderDiagnosticEntry: Codable, Identifiable, Equatable, Sendable {
 enum ProviderDiagnosticsStore {
     private static let fileName = "diagnostics.json"
     private static let maxEntries = 40
+    /// Serializes read-modify-write across parallel provider refreshes.
+    private static let queue = DispatchQueue(label: "com.local.CursorLimits.diagnostics")
 
     private static var fileURL: URL {
-        SnapshotStore.applicationSupportDirectoryURL.appendingPathComponent(fileName)
+        AppPaths.applicationSupportDirectoryURL.appendingPathComponent(fileName)
     }
 
     static func record(provider: ProviderID, summary: String, detail: String) {
-        var all = loadAll()
-        let entry = ProviderDiagnosticEntry(
-            id: UUID().uuidString,
-            providerID: provider,
-            createdAt: Date(),
-            summary: SecretRedactor.redact(summary),
-            detail: SecretRedactor.redact(detail)
-        )
-        all.insert(entry, at: 0)
-        if all.count > maxEntries {
-            all = Array(all.prefix(maxEntries))
+        queue.sync {
+            var all = loadAllUnlocked()
+            let entry = ProviderDiagnosticEntry(
+                id: UUID().uuidString,
+                providerID: provider,
+                createdAt: Date(),
+                summary: SecretRedactor.redact(summary),
+                detail: SecretRedactor.redact(detail)
+            )
+            all.insert(entry, at: 0)
+            if all.count > maxEntries {
+                all = Array(all.prefix(maxEntries))
+            }
+            saveUnlocked(all)
         }
-        save(all)
     }
 
     static func entries(for provider: ProviderID) -> [ProviderDiagnosticEntry] {
-        loadAll().filter { $0.providerID == provider }
+        queue.sync {
+            loadAllUnlocked().filter { $0.providerID == provider }
+        }
     }
 
     static func latest(for provider: ProviderID) -> ProviderDiagnosticEntry? {
@@ -42,17 +48,19 @@ enum ProviderDiagnosticsStore {
     }
 
     static func clear(provider: ProviderID) {
-        save(loadAll().filter { $0.providerID != provider })
+        queue.sync {
+            saveUnlocked(loadAllUnlocked().filter { $0.providerID != provider })
+        }
     }
 
-    private static func loadAll() -> [ProviderDiagnosticEntry] {
+    private static func loadAllUnlocked() -> [ProviderDiagnosticEntry] {
         guard let data = try? Data(contentsOf: fileURL) else { return [] }
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         return (try? decoder.decode([ProviderDiagnosticEntry].self, from: data)) ?? []
     }
 
-    private static func save(_ entries: [ProviderDiagnosticEntry]) {
+    private static func saveUnlocked(_ entries: [ProviderDiagnosticEntry]) {
         try? SnapshotStore.ensureDirectory()
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601

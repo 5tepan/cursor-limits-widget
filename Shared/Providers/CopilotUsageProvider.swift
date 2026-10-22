@@ -25,9 +25,8 @@ struct CopilotUsageProvider: UsageProvider {
             if let premium {
                 let used: Double?
                 if let remaining = premium.remaining_percentage ?? premium.remainingPercentage {
-                    // remaining is % left → used = 1 - remaining/100
-                    let rem = remaining > 1.5 ? remaining / 100.0 : remaining
-                    used = min(max(1.0 - rem, 0), 1)
+                    // remaining is % left → used = 1 - remaining
+                    used = UsageFraction.usedFromRemaining(remaining)
                 } else if let entitlementRequests = premium.entitlement_requests ?? premium.entitlementRequests,
                           let usedRequests = premium.used_requests ?? premium.usedRequests,
                           entitlementRequests > 0
@@ -136,7 +135,7 @@ struct CopilotUsageProvider: UsageProvider {
     }
 
     private static func readGhHostsYML() -> String? {
-        let url = FileManager.default.homeDirectoryForCurrentUser
+        let url = AppPaths.realHomeURL
             .appendingPathComponent(".config/gh/hosts.yml")
         guard let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
         // Very small YAML scrape for oauth_token under github.com

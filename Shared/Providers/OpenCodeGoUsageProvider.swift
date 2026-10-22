@@ -104,7 +104,7 @@ struct OpenCodeGoUsageProvider: UsageProvider {
 
         var fraction: Double? {
             guard let percent else { return nil }
-            return percent > 1.5 ? min(percent / 100.0, 1) : min(max(percent, 0), 1)
+            return UsageFraction.normalize(percent)
         }
 
         var resetDate: Date? {

@@ -17,6 +17,27 @@ jobs:
       - name: Install xcodegen
         run: brew install xcodegen
 
+      - name: Check tag matches MARKETING_VERSION
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(grep -m1 'MARKETING_VERSION:' project.yml | sed 's/.*"\(.*\)".*/\1/')
+          echo "tag=$TAG project=$VERSION"
+          test "$TAG" = "$VERSION"
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Unit tests
+        run: |
+          xcodebuild test \
+            -project CursorLimits.xcodeproj \
+            -scheme CursorLimits \
+            -destination 'platform=macOS' \
+            -derivedDataPath DerivedData-CI \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO
+
       - name: Package
         env:
           CI: "true"

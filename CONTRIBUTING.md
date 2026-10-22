@@ -20,6 +20,11 @@ Build, docs-only, and feature work in separate PRs when you can. Branch from
 
 ```bash
 brew install xcodegen   # once
+xcodegen generate
+xcodebuild test \
+  -project CursorLimits.xcodeproj \
+  -scheme CursorLimits \
+  -destination 'platform=macOS'
 ./scripts/install-local.sh
 ```
 

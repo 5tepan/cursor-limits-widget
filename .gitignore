@@ -1,6 +1,7 @@
 # Build artifacts (contain absolute local paths)
 DerivedData/
 DerivedData-Release/
+DerivedData-CI/
 dist/
 build/
 .build/

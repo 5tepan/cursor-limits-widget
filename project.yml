@@ -43,7 +43,21 @@ targets:
         embed: true
         codeSign: true
     scheme:
-      testTargets: []
+      testTargets:
+        - CursorLimitsTests
+
+  CursorLimitsTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: CursorLimitsTests
+    dependencies:
+      - target: CursorLimits
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimitsTests
+        GENERATE_INFOPLIST_FILE: YES
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
 
   CursorLimitsWidget:
     type: app-extension

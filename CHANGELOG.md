@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Provider discovery runs once (or on Rescan) — no longer re-enables all providers every launch
 - Cursor OAuth refresh stores the token in Keychain only (Cursor `state.vscdb` is read-only)
 - Cursor API errors are redacted before UI / snapshot (aligned with other providers)
+- Stopped writing legacy `snapshot.json` on every save (one-shot migrate on load remains)
+- Unified `AppPaths.realHome` for credentials and Application Support
+- Serialized diagnostics log writes; shared `UsageFraction.normalize`
+- CI runs unit tests before packaging; release checks tag vs `MARKETING_VERSION`
+
+### Fixed
+
+- Changelog 1.0.0 incorrectly mentioned App Groups (host dual-writes into Application Support + widget container)
 
 
 ## [1.1.0] - 2026-10-21
@@ -49,7 +57,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Initial release: macOS menu bar app + WidgetKit extension for Cursor usage limits
-- Local session read + official API refresh; shared App Group snapshot for host and widgets
+- Local session read + official API refresh; snapshot dual-written to Application Support and the widget container (no App Groups)
 
 [Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.1.0...HEAD
 [1.1.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.0.0...v1.1.0

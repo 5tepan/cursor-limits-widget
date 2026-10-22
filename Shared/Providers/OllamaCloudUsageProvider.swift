@@ -41,18 +41,16 @@ struct OllamaCloudUsageProvider: UsageProvider {
             } else if let session = balance.included?.session {
                 // Legacy: remaining_percent is % left
                 let rem = session.remaining_percent ?? 100
-                let used = 1.0 - (rem > 1.5 ? rem / 100.0 : rem)
                 windows.append(UsageWindow(
                     label: "session",
-                    fraction: min(max(used, 0), 1),
+                    fraction: UsageFraction.usedFromRemaining(rem),
                     resetsAt: session.resetsDate
                 ))
                 if let weekly = balance.included?.weekly {
                     let wRem = weekly.remaining_percent ?? 100
-                    let wUsed = 1.0 - (wRem > 1.5 ? wRem / 100.0 : wRem)
                     windows.append(UsageWindow(
                         label: "weekly",
-                        fraction: min(max(wUsed, 0), 1),
+                        fraction: UsageFraction.usedFromRemaining(wRem),
                         resetsAt: weekly.resetsDate
                     ))
                 }

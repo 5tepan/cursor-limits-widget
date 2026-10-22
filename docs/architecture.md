@@ -46,9 +46,10 @@ Deep links: `cursorlimits://refresh`, `cursorlimits://settings`.
 
 ## Why dual-write
 
-The widget runs sandboxed. The host writes the same snapshot into the real
-Application Support folder and into the widget’s container path so the gallery
-extension can read usage without App Groups.
+The widget runs sandboxed. The host writes the same `app-snapshot.json` into the
+real Application Support folder and into the widget’s container path so the
+gallery extension can read usage without App Groups. Legacy `snapshot.json` is
+only read for one-shot migration — it is no longer rewritten on each refresh.
 
 ## Signing
 

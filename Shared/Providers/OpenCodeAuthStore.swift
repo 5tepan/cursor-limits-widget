@@ -3,7 +3,7 @@ import Foundation
 /// Reads provider API keys from OpenCode's local auth.json — never from the network.
 enum OpenCodeAuthStore {
     private static var authFileURLs: [URL] {
-        let home = FileManager.default.homeDirectoryForCurrentUser
+        let home = AppPaths.realHomeURL
         return [
             home.appendingPathComponent(".local/share/opencode/auth.json"),
             home.appendingPathComponent(".config/opencode/auth.json"),

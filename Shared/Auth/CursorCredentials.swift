@@ -55,8 +55,8 @@ enum CursorCredentialsLoader {
     private static let emailKey = "cursorAuth/cachedEmail"
 
     static func defaultStateDatabaseURL(fileManager: FileManager = .default) -> URL {
-        fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/Cursor/User/globalStorage/state.vscdb")
+        _ = fileManager
+        return AppPaths.cursorStateDatabaseURL
     }
 
     static func load(fileManager: FileManager = .default) -> CursorCredentials? {

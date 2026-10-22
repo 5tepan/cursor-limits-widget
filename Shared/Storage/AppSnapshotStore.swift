@@ -59,10 +59,6 @@ enum AppSnapshotStore {
                 lastError = error
             }
         }
-        // Also keep legacy Cursor snapshot for older widget builds
-        if let cursor = snapshot.providers.first(where: { $0.providerID == .cursor }) {
-            try? SnapshotStore.save(cursor.asLegacySnapshot())
-        }
         if !wrote, let lastError { throw lastError }
     }
 }
@@ -97,35 +93,3 @@ private extension CursorUsageProvider {
     }
 }
 
-private extension ProviderUsage {
-    func asLegacySnapshot() -> UsageSnapshot {
-        let auto = windows.first(where: { $0.label == "Auto" })?.fraction
-        let api = windows.first(where: { $0.label == "API" })?.fraction
-        let total = primaryFraction
-        return UsageSnapshot(
-            fetchedAt: fetchedAt,
-            email: email,
-            planName: planName,
-            membershipType: nil,
-            billingCycleStart: nil,
-            billingCycleEnd: windows.compactMap(\.resetsAt).max(),
-            autoPercentUsed: auto,
-            apiPercentUsed: api,
-            totalPercentUsed: total,
-            planUsed: nil,
-            planLimit: nil,
-            planRemaining: nil,
-            includedSpend: includedSpend,
-            totalSpend: totalSpend,
-            bonusSpend: nil,
-            onDemandEnabled: onDemandEnabled,
-            onDemandUsedCents: onDemandUsedCents,
-            onDemandLimitCents: nil,
-            displayMessage: displayMessage,
-            tokenStats: tokenStats,
-            topModels: topModels,
-            status: status,
-            errorMessage: errorMessage
-        )
-    }
-}
