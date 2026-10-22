@@ -341,6 +341,55 @@ struct SettingsView: View {
                     }
                 }
 
+                settingsGroup(title: L10n.updatesSection) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(L10n.installedVersionLabel(AppUpdateChecker.installedVersion))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.secondary)
+
+                        Toggle(L10n.automaticUpdateChecks, isOn: Binding(
+                            get: { model.preferences.automaticUpdateChecks },
+                            set: { model.setAutomaticUpdateChecks($0) }
+                        ))
+                        .toggleStyle(.switch)
+
+                        if let update = model.availableUpdate {
+                            Text(L10n.updateAvailable(update.version))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.accentColor)
+                        } else if let message = model.updateStatusMessage {
+                            Text(message)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        HStack(spacing: 8) {
+                            Button {
+                                Task { await model.checkForUpdates(automatic: false) }
+                            } label: {
+                                if model.isCheckingForUpdate {
+                                    ProgressView()
+                                        .controlSize(.small)
+                                        .padding(.horizontal, 6)
+                                } else {
+                                    Text(L10n.checkForUpdates)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .controlSize(.small)
+                            .disabled(model.isCheckingForUpdate)
+
+                            if model.availableUpdate != nil {
+                                Button(L10n.downloadUpdate) {
+                                    model.openUpdateDownload()
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .controlSize(.small)
+                            }
+                        }
+                    }
+                }
+
                 settingsGroup(title: L10n.actions) {
                     Toggle(L10n.launchAtLogin, isOn: $launchAtLogin)
                         .toggleStyle(.switch)

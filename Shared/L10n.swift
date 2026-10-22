@@ -122,6 +122,33 @@ enum L10n {
     static var compactMenuBarTitle: String {
         t("Компактный title: % · дни до сброса", "Compact title: % · days until reset")
     }
+    static var updatesSection: String { t("Обновления", "Updates") }
+    static var automaticUpdateChecks: String {
+        t("Автоматически проверять обновления", "Check for updates automatically")
+    }
+    static var checkForUpdates: String { t("Проверить обновления", "Check for updates") }
+    static var downloadUpdate: String { t("Скачать обновление", "Download update") }
+    static var updateUpToDate: String {
+        t("У вас актуальная версия.", "You’re up to date.")
+    }
+    static var updateCheckFailed: String {
+        t("Не удалось проверить обновления.", "Couldn’t check for updates.")
+    }
+    static var updateNotificationTitle: String {
+        t("Доступно обновление Cursor Limits", "Cursor Limits update available")
+    }
+    static func updateAvailable(_ version: String) -> String {
+        t("Доступна версия \(version).", "Version \(version) is available.")
+    }
+    static func updateNotificationBody(_ version: String) -> String {
+        t(
+            "Версия \(version) готова. Откройте Настройки → Обновления, чтобы скачать.",
+            "Version \(version) is ready. Open Settings → Updates to download."
+        )
+    }
+    static func installedVersionLabel(_ version: String) -> String {
+        t("Установлено: \(version)", "Installed: \(version)")
+    }
     static var howToConnect: String { t("Как подключить аккаунт", "How to connect") }
     static var language: String { t("Язык", "Language") }
     static var languageSystem: String { t("Как в системе", "Match system") }

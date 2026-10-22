@@ -40,7 +40,7 @@ example:
 - `chatgpt.com` (Codex usage)
 - `ollama.com` (Ollama Cloud balance)
 - `opencode.ai` (OpenCode Go usage)
-- `api.github.com` / `github.com` (Copilot entitlement / device flow)
+- `api.github.com` / `github.com` (Copilot entitlement / device flow; optional update check against this repo’s Releases)
 
 No analytics, crash reporters, or third-party CDNs.
 

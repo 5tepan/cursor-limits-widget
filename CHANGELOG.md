@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- In-app updates: automatic GitHub Releases check, notification when a newer version is out, Settings → Updates (check / download)
+
 ## [1.2.0] - 2026-10-22
 
 ### Added

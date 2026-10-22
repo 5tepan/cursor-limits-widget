@@ -22,6 +22,8 @@ struct AppPreferences: Equatable, Sendable {
     var quietHoursEndHour: Int
     /// Show reset countdown next to % in the menu bar (`82% · 4d`).
     var compactMenuBarTitle: Bool
+    /// Periodically check GitHub Releases for a newer build.
+    var automaticUpdateChecks: Bool
 
     static var `default`: AppPreferences {
         AppPreferences(
@@ -34,7 +36,8 @@ struct AppPreferences: Equatable, Sendable {
             quietHoursEnabled: false,
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,
-            compactMenuBarTitle: true
+            compactMenuBarTitle: true,
+            automaticUpdateChecks: true
         )
     }
 }
@@ -43,6 +46,7 @@ extension AppPreferences: Codable {
     enum CodingKeys: String, CodingKey {
         case language, enabledProviderIDs, primaryProviderID, primarySelectionMode, didCompleteDiscovery
         case alertsEnabled, quietHoursEnabled, quietHoursStartHour, quietHoursEndHour, compactMenuBarTitle
+        case automaticUpdateChecks
     }
 
     init(from decoder: Decoder) throws {
@@ -60,6 +64,7 @@ extension AppPreferences: Codable {
         quietHoursStartHour = try c.decodeIfPresent(Int.self, forKey: .quietHoursStartHour) ?? 22
         quietHoursEndHour = try c.decodeIfPresent(Int.self, forKey: .quietHoursEndHour) ?? 8
         compactMenuBarTitle = try c.decodeIfPresent(Bool.self, forKey: .compactMenuBarTitle) ?? true
+        automaticUpdateChecks = try c.decodeIfPresent(Bool.self, forKey: .automaticUpdateChecks) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -74,6 +79,7 @@ extension AppPreferences: Codable {
         try c.encode(quietHoursStartHour, forKey: .quietHoursStartHour)
         try c.encode(quietHoursEndHour, forKey: .quietHoursEndHour)
         try c.encode(compactMenuBarTitle, forKey: .compactMenuBarTitle)
+        try c.encode(automaticUpdateChecks, forKey: .automaticUpdateChecks)
     }
 }
 

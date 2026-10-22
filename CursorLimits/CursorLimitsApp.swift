@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UserNotifications
 import WidgetKit
 
 @main
@@ -45,8 +46,12 @@ final class AppModel: ObservableObject {
     @Published var copilotDeviceCode: String?
     @Published var copilotVerifyURL: URL?
     @Published var isConnectingCopilot = false
+    @Published var availableUpdate: AppUpdateChecker.ReleaseInfo?
+    @Published var isCheckingForUpdate = false
+    @Published var updateStatusMessage: String?
 
     private var timer: Timer?
+    private var updateTimer: Timer?
     private var prefsObserver: NSObjectProtocol?
     /// First refresh may run discovery only when `didCompleteDiscovery` is false.
     private var pendingLaunchDiscovery = true
@@ -79,6 +84,7 @@ final class AppModel: ObservableObject {
         language = LanguageStore.preference
 
         startTimer()
+        startUpdateTimer()
         prefsObserver = NotificationCenter.default.addObserver(
             forName: AppPreferencesStore.changeNotification,
             object: nil,
@@ -90,6 +96,10 @@ final class AppModel: ObservableObject {
             }
         }
         Task { await refresh() }
+        Task {
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            await checkForUpdates(automatic: true)
+        }
     }
 
     deinit {
@@ -155,6 +165,97 @@ final class AppModel: ObservableObject {
                 await self?.refresh()
             }
         }
+    }
+
+    func startUpdateTimer() {
+        updateTimer?.invalidate()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: 24 * 60 * 60, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.checkForUpdates(automatic: true)
+            }
+        }
+    }
+
+    func setAutomaticUpdateChecks(_ enabled: Bool) {
+        AppPreferencesStore.update { $0.automaticUpdateChecks = enabled }
+        preferences = AppPreferencesStore.load()
+        if enabled {
+            Task { await checkForUpdates(automatic: true) }
+        }
+    }
+
+    /// - Parameter automatic: when true, skips UI “up to date” noise and only notifies on new versions.
+    func checkForUpdates(automatic: Bool) async {
+        if automatic, !preferences.automaticUpdateChecks { return }
+        guard !isCheckingForUpdate else { return }
+        isCheckingForUpdate = true
+        defer { isCheckingForUpdate = false }
+
+        do {
+            let update = try await AppUpdateChecker.availableUpdate()
+            availableUpdate = update
+            var state = AppUpdateStateStore.load()
+            state.lastCheckedAt = Date()
+            AppUpdateStateStore.save(state)
+
+            if let update {
+                updateStatusMessage = L10n.updateAvailable(update.version)
+                if automatic {
+                    await notifyUpdateIfNeeded(update)
+                }
+            } else {
+                availableUpdate = nil
+                if !automatic {
+                    updateStatusMessage = L10n.updateUpToDate
+                }
+            }
+        } catch {
+            if !automatic {
+                updateStatusMessage = L10n.updateCheckFailed
+                lastError = error.localizedDescription
+            }
+        }
+    }
+
+    func openUpdateDownload() {
+        guard let update = availableUpdate else {
+            if let url = URL(string: "https://github.com/\(AppUpdateChecker.githubOwner)/\(AppUpdateChecker.githubRepo)/releases/latest") {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
+        NSWorkspace.shared.open(update.zipURL ?? update.htmlURL)
+    }
+
+    private func notifyUpdateIfNeeded(_ update: AppUpdateChecker.ReleaseInfo) async {
+        var state = AppUpdateStateStore.load()
+        if state.lastNotifiedVersion == update.version { return }
+
+        let center = UNUserNotificationCenter.current()
+        let settings = await center.notificationSettings()
+        let allowed: Bool
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            allowed = true
+        case .notDetermined:
+            allowed = (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
+        default:
+            allowed = false
+        }
+        guard allowed else { return }
+
+        let content = UNMutableNotificationContent()
+        content.title = L10n.updateNotificationTitle
+        content.body = L10n.updateNotificationBody(update.version)
+        content.sound = .default
+        let request = UNNotificationRequest(
+            identifier: "app-update-\(update.version)",
+            content: content,
+            trigger: nil
+        )
+        try? await center.add(request)
+        state.lastNotifiedVersion = update.version
+        AppUpdateStateStore.save(state)
     }
 
     /// Re-run first-launch discovery: enable all, prune auth-missing, keep user prefs afterwards.
