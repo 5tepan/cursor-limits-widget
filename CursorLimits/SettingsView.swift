@@ -120,12 +120,34 @@ struct SettingsView: View {
                     }
                 }
 
+                rediscoverBlock
+
                 if model.preferences.enabledProviderIDs.contains(.copilot) {
                     copilotBlock
                 }
             }
             .padding(20)
         }
+    }
+
+    private var rediscoverBlock: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(L10n.rediscoverProvidersHint)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Button {
+                Task { await model.rediscoverProviders() }
+            } label: {
+                Label(L10n.rediscoverProviders, systemImage: "arrow.triangle.2.circlepath")
+            }
+            .disabled(model.isRefreshing)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary.opacity(0.04))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var primaryPicker: some View {

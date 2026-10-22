@@ -39,10 +39,31 @@ enum UsageRefresher {
             snapshot.status = .ok
             snapshot.fetchedAt = Date()
             return snapshot
-        } catch {
+        } catch let apiError as CursorAPI.APIError {
+            let userMessage = ProviderErrorCopy.humanize(apiError.errorDescription)
+                ?? L10n.t("Ошибка обновления", "Refresh failed")
+            ProviderDiagnosticsStore.record(
+                provider: .cursor,
+                summary: userMessage,
+                detail: apiError.diagnosticDetail
+            )
             var snap = SnapshotStore.load() ?? UsageSnapshot.empty
             snap.status = .error
-            snap.errorMessage = error.localizedDescription
+            snap.errorMessage = userMessage
+            snap.fetchedAt = Date()
+            return snap
+        } catch {
+            let raw = error.localizedDescription
+            let userMessage = ProviderErrorCopy.humanize(raw)
+                ?? L10n.t("Ошибка обновления", "Refresh failed")
+            ProviderDiagnosticsStore.record(
+                provider: .cursor,
+                summary: userMessage,
+                detail: SecretRedactor.redact(raw)
+            )
+            var snap = SnapshotStore.load() ?? UsageSnapshot.empty
+            snap.status = .error
+            snap.errorMessage = userMessage
             snap.fetchedAt = Date()
             return snap
         }

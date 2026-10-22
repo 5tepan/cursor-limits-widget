@@ -14,6 +14,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Bilingual README (`README.md` / `README.ru.md`) with screenshots (menu bar + widgets caveat)
 - `schemaVersion` on `app-snapshot.json` + [snapshot contract](docs/snapshot-contract.md) for external readers
 - Deep links `cursorlimits://refresh` and `cursorlimits://settings` (Cyclop handoff)
+- Multi-provider onboarding checklist; Settings → Rescan providers
+
+### Changed
+
+- Provider discovery runs once (or on Rescan) — no longer re-enables all providers every launch
+- Cursor OAuth refresh stores the token in Keychain only (Cursor `state.vscdb` is read-only)
+- Cursor API errors are redacted before UI / snapshot (aligned with other providers)
 
 
 ## [1.1.0] - 2026-10-21

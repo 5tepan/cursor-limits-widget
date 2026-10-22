@@ -85,12 +85,29 @@ enum CursorAPI {
         case decode(Error)
         case network(Error)
 
+        /// Safe for UI / snapshot — never includes response bodies (may contain secrets).
         var errorDescription: String? {
             switch self {
+            case .http(let code, _):
+                return "HTTP \(code)"
+            case .decode:
+                return "Decode error"
+            case .network(let error):
+                return error.localizedDescription
+            }
+        }
+
+        /// Technical detail for local diagnostics (redact before display / disk).
+        var diagnosticDetail: String {
+            switch self {
             case .http(let code, let body):
-                return "HTTP \(code)\(body.map { ": \($0)" } ?? "")"
+                return ProviderErrorCopy.detail(
+                    from: code,
+                    host: "cursor.com",
+                    body: body ?? ""
+                )
             case .decode(let error):
-                return "Decode: \(error.localizedDescription)"
+                return error.localizedDescription
             case .network(let error):
                 return error.localizedDescription
             }

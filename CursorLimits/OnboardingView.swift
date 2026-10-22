@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 struct OnboardingView: View {
     @ObservedObject var model: AppModel
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -13,24 +15,14 @@ struct OnboardingView: View {
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            VStack(alignment: .leading, spacing: 6) {
-                Label(L10n.step1, systemImage: "1.circle.fill")
-                Label(L10n.step2, systemImage: "2.circle.fill")
-                Label(L10n.step3, systemImage: "3.circle.fill")
-            }
-            .font(.caption)
+            Text(L10n.connectStepsHint)
+                .font(.caption)
+                .foregroundStyle(.secondary)
 
-            HStack(spacing: 8) {
-                statusPill(
-                    ok: AccountConnection.isCursorInstalled,
-                    okText: L10n.cursorInstalled,
-                    badText: L10n.cursorMissing
-                )
-                statusPill(
-                    ok: AccountConnection.hasLocalSession,
-                    okText: L10n.signedIn,
-                    badText: L10n.notSignedIn
-                )
+            VStack(alignment: .leading, spacing: 6) {
+                ForEach(ProviderID.allCases) { id in
+                    providerRow(id)
+                }
             }
 
             if let message = model.lastError
@@ -44,37 +36,41 @@ struct OnboardingView: View {
             }
 
             HStack(spacing: 8) {
-                if AccountConnection.isCursorInstalled {
-                    Button(L10n.openCursor) {
-                        AccountConnection.openCursor()
-                    }
-                } else {
-                    Button(L10n.downloadCursor) {
-                        AccountConnection.openCursorDownload()
-                    }
+                Button(L10n.openSettings) {
+                    NSApp.activate(ignoringOtherApps: true)
+                    openSettings()
                 }
 
                 Button(L10n.checkConnection) {
-                    Task { await model.refresh() }
+                    Task { await model.rediscoverProviders() }
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(model.isRefreshing)
             }
+
+            Text(L10n.widgetHintOptional)
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 4)
     }
 
-    private func statusPill(ok: Bool, okText: String, badText: String) -> some View {
-        HStack(spacing: 4) {
-            Image(systemName: ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-            Text(ok ? okText : badText)
-                .lineLimit(1)
+    private func providerRow(_ id: ProviderID) -> some View {
+        let available = ProviderRegistry.provider(for: id)?.isAvailable() ?? false
+        return HStack(spacing: 8) {
+            Image(systemName: available ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(available ? Color.green : Color.secondary)
+                .font(.caption)
+            Image(systemName: id.symbolName)
+                .font(.caption)
+                .frame(width: 14)
+            Text(id.displayName)
+                .font(.caption)
+            Spacer(minLength: 0)
+            Text(available ? L10n.sessionFound : L10n.sessionMissing)
+                .font(.caption2)
+                .foregroundStyle(available ? Color.green : Color.secondary)
         }
-        .font(.caption2.weight(.medium))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background((ok ? Color.green : Color.orange).opacity(0.15))
-        .foregroundStyle(ok ? Color.green : Color.orange)
-        .clipShape(Capsule())
     }
 }

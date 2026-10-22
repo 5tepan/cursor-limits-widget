@@ -41,6 +41,9 @@ credentials/
 *credentials*.json
 WorkosCursorSessionToken*
 
+# Local notes / plans (not for the remote repo)
+.local/
+
 # OS / editor junk
 .DS_Store
 .AppleDouble

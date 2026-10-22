@@ -1,4 +1,5 @@
 import Foundation
+import Security
 import SQLite3
 
 struct CursorCredentials: Sendable {
@@ -7,6 +8,44 @@ struct CursorCredentials: Sendable {
     let membershipType: String?
     let email: String?
     let databaseURL: URL
+}
+
+/// Stores refreshed Cursor access tokens in our Keychain — never write Cursor's `state.vscdb`.
+enum CursorTokenKeychain {
+    private static let service = "CursorLimits-Cursor"
+    private static let account = "accessToken"
+
+    static func storeAccessToken(_ token: String) {
+        let data = Data(token.utf8)
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        SecItemDelete(query as CFDictionary)
+        var add = query
+        add[kSecValueData as String] = data
+        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        SecItemAdd(add as CFDictionary, nil)
+    }
+
+    static func readAccessToken() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+              let data = result as? Data,
+              let token = String(data: data, encoding: .utf8)?
+                .trimmingCharacters(in: .whitespacesAndNewlines),
+              !token.isEmpty
+        else { return nil }
+        return token
+    }
 }
 
 enum CursorCredentialsLoader {
@@ -22,10 +61,21 @@ enum CursorCredentialsLoader {
 
     static func load(fileManager: FileManager = .default) -> CursorCredentials? {
         let url = defaultStateDatabaseURL(fileManager: fileManager)
-        guard let accessToken = readValue(key: accessTokenKey, at: url)?
-            .trimmingCharacters(in: .whitespacesAndNewlines),
-            !accessToken.isEmpty
-        else { return nil }
+        let dbToken = readValue(key: accessTokenKey, at: url)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let keychainToken = CursorTokenKeychain.readAccessToken()
+
+        // Prefer a non-expired Keychain token (from our refresh); fall back to Cursor DB.
+        let accessToken: String?
+        if let keychainToken, !isExpired(keychainToken) {
+            accessToken = keychainToken
+        } else if let dbToken, !dbToken.isEmpty {
+            accessToken = dbToken
+        } else {
+            accessToken = keychainToken ?? dbToken
+        }
+
+        guard let accessToken, !accessToken.isEmpty else { return nil }
 
         return CursorCredentials(
             accessToken: accessToken,
@@ -153,8 +203,8 @@ enum CursorTokenRefresher {
             throw RefreshError.shouldLogout
         }
 
-        // Persist refreshed access token back into Cursor's state DB so both stay in sync.
-        try writeSQLiteValue(accessToken, key: "cursorAuth/accessToken", at: credentials.databaseURL)
+        // Keep Cursor's DB read-only — store the refreshed token in our Keychain only.
+        CursorTokenKeychain.storeAccessToken(accessToken)
 
         return CursorCredentials(
             accessToken: accessToken,
@@ -165,32 +215,10 @@ enum CursorTokenRefresher {
         )
     }
 
-    private static func writeSQLiteValue(_ value: String, key: String, at url: URL) throws {
-        var db: OpaquePointer?
-        guard sqlite3_open_v2(url.path, &db, SQLITE_OPEN_READWRITE, nil) == SQLITE_OK, let db else {
-            throw RefreshError.sqliteWriteFailed
-        }
-        defer { sqlite3_close(db) }
-
-        let sql = "UPDATE ItemTable SET value = ? WHERE key = ?;"
-        var statement: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK, let statement else {
-            throw RefreshError.sqliteWriteFailed
-        }
-        defer { sqlite3_finalize(statement) }
-
-        sqlite3_bind_text(statement, 1, value, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        sqlite3_bind_text(statement, 2, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        guard sqlite3_step(statement) == SQLITE_DONE else {
-            throw RefreshError.sqliteWriteFailed
-        }
-    }
-
     enum RefreshError: Error {
         case missingRefreshToken
         case shouldLogout
         case http(Int)
         case invalidResponse
-        case sqliteWriteFailed
     }
 }

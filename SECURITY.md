@@ -11,6 +11,7 @@ not create accounts, and does not upload your tokens.
 | Preferences (language, enabled providers, primary) | `…/preferences.json` | No |
 | Redacted error log | `…/diagnostics.json` | No — secrets stripped before write |
 | Optional Copilot OAuth token (device flow) | macOS Keychain service `CursorLimits-GitHub` | No |
+| Optional refreshed Cursor access token | macOS Keychain service `CursorLimits-Cursor` | No |
 
 Snapshots and preferences are also written under the widget sandbox container so
 WidgetKit can read them. Nothing is sent to a Cursor Limits server — there isn’t one.
@@ -19,7 +20,7 @@ WidgetKit can read them. Nothing is sent to a Cursor Limits server — there isn
 
 Local credentials that **you already created** by signing into other tools:
 
-- **Cursor** — session in Cursor’s `state.vscdb`
+- **Cursor** — session in Cursor’s `state.vscdb` (**read-only**; refreshed tokens go to our Keychain, not back into Cursor’s DB)
 - **Claude Code** — `~/.claude` / Keychain entry used by the CLI
 - **Codex** — `~/.codex/auth.json`
 - **Ollama Cloud / OpenCode Go** — keys in OpenCode `auth.json` (or env vars)

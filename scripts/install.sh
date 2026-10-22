@@ -34,9 +34,9 @@ osascript <<'EOF' || true
 display dialog "Cursor Limits installed.
 
 Next:
-1. Open Cursor and sign in
-2. Menu bar icon → Check connection
-3. Desktop → Edit Widgets → “Cursor Limits”
+1. Sign in to the AI tools you use (Cursor, Claude CLI, Codex, OpenCode, gh, …)
+2. Menu bar icon → Check (or open Settings → providers)
+3. Copilot: Settings → Connect GitHub
 
-If the widget is missing, wait a few seconds and open Edit Widgets again." buttons {"OK"} default button 1 with title "Cursor Limits"
+Desktop widgets may not work yet — the menu bar is the supported surface." buttons {"OK"} default button 1 with title "Cursor Limits"
 EOF

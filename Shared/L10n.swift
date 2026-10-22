@@ -26,15 +26,21 @@ enum L10n {
     }
 
     // Connection
-    static var connectTitle: String { t("Подключение аккаунта", "Connect your account") }
+    static var connectTitle: String { t("Подключите провайдеров", "Connect your providers") }
     static var connectSafeNote: String {
         t(
             "Токены никуда не отправляются — приложение читает локальные сессии на этом Mac и ходит только на официальные API провайдеров.",
             "No tokens are uploaded — the app reads local sessions on this Mac and only calls each provider’s official API."
         )
     }
+    static var connectStepsHint: String {
+        t(
+            "Войдите в нужные инструменты на этом Mac, затем нажмите «Проверить». Copilot — через Настройки.",
+            "Sign in to the tools you use on this Mac, then tap Check. Copilot is connected in Settings."
+        )
+    }
     static var providers: String { t("Провайдеры", "Providers") }
-    static var primaryProvider: String { t("Основной для виджета", "Primary for widget") }
+    static var primaryProvider: String { t("Основной (меню-бар и виджет)", "Primary (menu bar & widget)") }
     static var primaryAutomatic: String { t("Авто (кто больше использовал)", "Auto (highest usage)") }
     static var connectGitHub: String { t("Подключить GitHub (Copilot)", "Connect GitHub (Copilot)") }
     static var waitingGitHub: String { t("Ожидание подтверждения…", "Waiting for confirmation…") }
@@ -50,28 +56,37 @@ enum L10n {
     static var clearErrorLog: String { t("Очистить", "Clear") }
     static var copyErrorLog: String { t("Копировать", "Copy") }
     static var noErrorLog: String { t("Записей пока нет.", "No entries yet.") }
-    static var step1: String {
-        t("1. Установите и откройте Cursor", "1. Install and open Cursor")
-    }
-    static var step2: String {
-        t("2. Войдите в свой аккаунт Cursor", "2. Sign in to your Cursor account")
-    }
-    static var step3: String {
-        t("3. Нажмите «Проверить подключение»", "3. Tap “Check connection”")
-    }
+    static var openSettings: String { t("Настройки", "Settings") }
     static var openCursor: String { t("Открыть Cursor", "Open Cursor") }
     static var downloadCursor: String { t("Скачать Cursor", "Download Cursor") }
-    static var checkConnection: String { t("Проверить подключение", "Check connection") }
+    static var checkConnection: String { t("Проверить", "Check") }
+    static var rediscoverProviders: String {
+        t("Пересканировать провайдеров", "Rescan providers")
+    }
+    static var rediscoverProvidersHint: String {
+        t(
+            "Включит все источники, отключит без локальной сессии. Ручной выбор сохранится после этого.",
+            "Enables all sources, turns off those without a local session. Your manual choice is kept afterward."
+        )
+    }
+    static var sessionFound: String { t("сессия есть", "session found") }
+    static var sessionMissing: String { t("нет сессии", "no session") }
     static var cursorInstalled: String { t("Cursor найден", "Cursor found") }
     static var cursorMissing: String { t("Cursor не установлен", "Cursor not installed") }
     static var signedIn: String { t("Аккаунт подключён", "Account connected") }
     static var notSignedIn: String {
-        t("Сессия не найдена — войдите в Cursor", "No session found — sign in to Cursor")
+        t("Сессия не найдена", "No session found")
     }
     static var noSessionDetail: String {
         t(
-            "Войдите в Cursor IDE на этом Mac. Отдельный логин и вставка токенов не нужны.",
-            "Sign in to Cursor IDE on this Mac. No separate login or token paste is required."
+            "Войдите в Cursor IDE (или другой провайдер) на этом Mac. Отдельный логин и вставка токенов не нужны.",
+            "Sign in to Cursor IDE (or another provider) on this Mac. No separate login or token paste is required."
+        )
+    }
+    static var widgetHintOptional: String {
+        t(
+            "Виджеты на рабочем столе пока могут не работать — надёжная поверхность сейчас меню-бар.",
+            "Desktop widgets may not work yet — the menu bar is the supported surface today."
         )
     }
     static var errorTitle: String { t("Ошибка", "Error") }
@@ -96,8 +111,8 @@ enum L10n {
     static var cursorSession: String { t("Сессия Cursor", "Cursor session") }
     static var widgetHint: String {
         t(
-            "Виджет: ПКМ на рабочем столе → «Редактировать виджеты» → Cursor Limits.",
-            "Widget: right-click the desktop → Edit Widgets → Cursor Limits."
+            "Виджет (нестабильно): ПКМ на рабочем столе → «Редактировать виджеты» → Cursor Limits.",
+            "Widget (unreliable): right-click the desktop → Edit Widgets → Cursor Limits."
         )
     }
     static var privacyNote: String {

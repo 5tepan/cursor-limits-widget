@@ -11,20 +11,23 @@ struct AppPreferences: Equatable, Sendable {
     var enabledProviderIDs: [ProviderID]
     var primaryProviderID: ProviderID
     var primarySelectionMode: PrimarySelectionMode
+    /// First-launch (or manual rescan) discovery has finished — do not overwrite enables again.
+    var didCompleteDiscovery: Bool
 
     static var `default`: AppPreferences {
         AppPreferences(
             language: .system,
             enabledProviderIDs: AppPreferencesStore.defaultEnabled,
             primaryProviderID: .cursor,
-            primarySelectionMode: .automatic
+            primarySelectionMode: .automatic,
+            didCompleteDiscovery: false
         )
     }
 }
 
 extension AppPreferences: Codable {
     enum CodingKeys: String, CodingKey {
-        case language, enabledProviderIDs, primaryProviderID, primarySelectionMode
+        case language, enabledProviderIDs, primaryProviderID, primarySelectionMode, didCompleteDiscovery
     }
 
     init(from decoder: Decoder) throws {
@@ -35,6 +38,8 @@ extension AppPreferences: Codable {
         primaryProviderID = try c.decodeIfPresent(ProviderID.self, forKey: .primaryProviderID) ?? .cursor
         primarySelectionMode = try c.decodeIfPresent(PrimarySelectionMode.self, forKey: .primarySelectionMode)
             ?? .automatic
+        // Existing installs already have a customized list — treat as discovered.
+        didCompleteDiscovery = try c.decodeIfPresent(Bool.self, forKey: .didCompleteDiscovery) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -43,6 +48,7 @@ extension AppPreferences: Codable {
         try c.encode(enabledProviderIDs, forKey: .enabledProviderIDs)
         try c.encode(primaryProviderID, forKey: .primaryProviderID)
         try c.encode(primarySelectionMode, forKey: .primarySelectionMode)
+        try c.encode(didCompleteDiscovery, forKey: .didCompleteDiscovery)
     }
 }
 
@@ -92,6 +98,7 @@ enum AppPreferencesStore {
                     prefs.primaryProviderID = primary
                 }
                 prefs.primarySelectionMode = .automatic
+                prefs.didCompleteDiscovery = true
                 return normalized(prefs)
             }
             // Language-only format
@@ -100,6 +107,7 @@ enum AppPreferencesStore {
             {
                 var prefs = AppPreferences.default
                 prefs.language = language
+                prefs.didCompleteDiscovery = true
                 return prefs
             }
         }

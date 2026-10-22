@@ -42,8 +42,10 @@ final class AppModel: ObservableObject {
 
     private var timer: Timer?
     private var prefsObserver: NSObjectProtocol?
-    /// First refresh of this process runs full provider discovery.
+    /// First refresh may run discovery only when `didCompleteDiscovery` is false.
     private var pendingLaunchDiscovery = true
+    /// Settings → Rescan: force discovery once even after completion.
+    private var forceDiscovery = false
 
     var menuBarFraction: Double? {
         guard let primary = snapshot.primary, primary.status == .ok else { return nil }
@@ -137,14 +139,24 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// Re-run first-launch discovery: enable all, prune auth-missing, keep user prefs afterwards.
+    func rediscoverProviders() async {
+        forceDiscovery = true
+        await refresh()
+    }
+
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true
         defer { isRefreshing = false }
 
-        let discovery = pendingLaunchDiscovery
+        preferences = AppPreferencesStore.load()
+        let discovery = forceDiscovery
+            || (pendingLaunchDiscovery && !preferences.didCompleteDiscovery)
+        pendingLaunchDiscovery = false
+        forceDiscovery = false
+
         if discovery {
-            pendingLaunchDiscovery = false
             AppPreferencesStore.update { prefs in
                 prefs.enabledProviderIDs = ProviderID.allCases
             }
@@ -155,6 +167,9 @@ final class AppModel: ObservableObject {
 
         if discovery {
             pruneAfterDiscovery(snapshot: next)
+            AppPreferencesStore.update { prefs in
+                prefs.didCompleteDiscovery = true
+            }
             preferences = AppPreferencesStore.load()
             // Re-filter snapshot providers to enabled set for consistent UI
             let enabled = Set(preferences.enabledProviderIDs)
