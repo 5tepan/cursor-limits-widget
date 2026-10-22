@@ -70,6 +70,7 @@ brew install xcodegen
 - [Контракт snapshot](docs/snapshot-contract.md) — файловый мост для внешних UI (Cyclop и др.)
 - [Провайдеры](docs/providers.md)
 - [Changelog](CHANGELOG.md) — что нового по версиям
+- [Релиз и подпись](docs/release.md) — Developer ID / notarization
 - [Contributing](CONTRIBUTING.md)
 
 ## Ограничения

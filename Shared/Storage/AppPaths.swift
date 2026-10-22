@@ -4,7 +4,7 @@ import Foundation
 /// Canonical paths for credentials and Application Support (host + widget).
 enum AppPaths {
     static let directoryName = "CursorLimits"
-    static let widgetBundleID = "com.local.CursorLimits.widget"
+    static var widgetBundleID: String { BundleIdentity.widget }
 
     /// Real macOS user home (not a sandbox container home).
     static var realHomeURL: URL {

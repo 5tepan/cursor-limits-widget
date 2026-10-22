@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-10-22
+
 ### Added
 
 - Project docs: MIT license, security policy, contributing guide, architecture and providers notes
@@ -17,21 +19,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Multi-provider onboarding checklist; Settings → Rescan providers
 - Usage alerts at 70% / 90% / 100% (primary) with optional quiet hours
 - Compact menu bar title (`82% · 4d`) and urgency-colored glyph above 70%
+- [Release / notarization guide](docs/release.md); Hardened Runtime on Release builds
+- Unit tests + CI test job; `UsageFraction`, diagnostics serial queue
 
 ### Changed
 
+- Bundle ID → `com.5tepan.cursorlimits` (migrates widget-container data from `com.local.*`)
 - Provider discovery runs once (or on Rescan) — no longer re-enables all providers every launch
 - Cursor OAuth refresh stores the token in Keychain only (Cursor `state.vscdb` is read-only)
 - Cursor API errors are redacted before UI / snapshot (aligned with other providers)
 - Stopped writing legacy `snapshot.json` on every save (one-shot migrate on load remains)
 - Unified `AppPaths.realHome` for credentials and Application Support
-- Serialized diagnostics log writes; shared `UsageFraction.normalize`
-- CI runs unit tests before packaging; release checks tag vs `MARKETING_VERSION`
+- Refresh requests coalesce instead of dropping; deep links use a single early `AppModel`
 
 ### Fixed
 
 - Changelog 1.0.0 incorrectly mentioned App Groups (host dual-writes into Application Support + widget container)
-
 
 ## [1.1.0] - 2026-10-21
 
@@ -61,6 +64,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release: macOS menu bar app + WidgetKit extension for Cursor usage limits
 - Local session read + official API refresh; snapshot dual-written to Application Support and the widget container (no App Groups)
 
-[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/5tepan/cursor-limits-widget/releases/tag/v1.0.0

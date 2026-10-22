@@ -1,6 +1,6 @@
 name: CursorLimits
 options:
-  bundleIdPrefix: com.local
+  bundleIdPrefix: com.5tepan
   deploymentTarget:
     macOS: "14.0"
   createIntermediateGroups: true
@@ -14,6 +14,9 @@ settings:
     CODE_SIGN_STYLE: Automatic
     DEVELOPMENT_TEAM: ""
     ENABLE_HARDENED_RUNTIME: NO
+  configs:
+    Release:
+      ENABLE_HARDENED_RUNTIME: YES
 
 targets:
   CursorLimits:
@@ -27,7 +30,7 @@ targets:
           - "*.entitlements"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimits
+        PRODUCT_BUNDLE_IDENTIFIER: com.5tepan.cursorlimits
         PRODUCT_NAME: CursorLimits
         INFOPLIST_FILE: CursorLimits/Info.plist
         CODE_SIGN_ENTITLEMENTS: CursorLimits/CursorLimits.entitlements
@@ -36,8 +39,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_APP_SANDBOX: NO
-        MARKETING_VERSION: "1.1.0"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "5"
     dependencies:
       - target: CursorLimitsWidget
         embed: true
@@ -55,7 +58,7 @@ targets:
       - target: CursorLimits
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimitsTests
+        PRODUCT_BUNDLE_IDENTIFIER: com.5tepan.cursorlimits.tests
         GENERATE_INFOPLIST_FILE: YES
         MACOSX_DEPLOYMENT_TARGET: "14.0"
 
@@ -70,7 +73,7 @@ targets:
           - "*.entitlements"
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.local.CursorLimits.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.5tepan.cursorlimits.widget
         PRODUCT_NAME: CursorLimitsWidget
         INFOPLIST_FILE: CursorLimitsWidget/Info.plist
         CODE_SIGN_ENTITLEMENTS: CursorLimitsWidget/CursorLimitsWidget.entitlements
@@ -79,5 +82,5 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         # WidgetKit silently skips unsandboxed appex in the macOS gallery
         ENABLE_APP_SANDBOX: YES
-        MARKETING_VERSION: "1.1.0"
-        CURRENT_PROJECT_VERSION: "4"
+        MARKETING_VERSION: "1.2.0"
+        CURRENT_PROJECT_VERSION: "5"

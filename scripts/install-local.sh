@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 DERIVED="$ROOT/DerivedData"
 APP_NAME="CursorLimits"
 DEST="/Applications/${APP_NAME}.app"
-WIDGET_ID="com.local.CursorLimits.widget"
+WIDGET_ID="com.5tepan.cursorlimits.widget"
 HOST_ENTITLEMENTS="$ROOT/CursorLimits/CursorLimits.entitlements"
 WIDGET_ENTITLEMENTS="$ROOT/CursorLimitsWidget/CursorLimitsWidget.entitlements"
 

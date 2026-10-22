@@ -65,7 +65,8 @@ max(windows.fraction)  or  first window fraction
 | `cursorlimits://refresh` | Trigger a refresh in the running app |
 | `cursorlimits://settings` | Activate app and open Settings |
 
-Bundle id: `com.local.CursorLimits`.
+Bundle id: `com.5tepan.cursorlimits` (legacy installs used `com.local.CursorLimits`;
+widget container data is migrated on first launch).
 
 ## Example (truncated)
 

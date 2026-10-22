@@ -1,14 +1,12 @@
 import AppKit
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    weak var model: AppModel?
+    /// Single shared model — created before scenes so deep links are not dropped.
+    let model: AppModel
 
-    func application(_ application: NSApplication, open urls: [URL]) {
-        guard let model else { return }
-        for url in urls {
-            Task { @MainActor in
-                DeepLinkRouter.handle(url, model: model)
-            }
-        }
+    override init() {
+        model = AppModel()
+        super.init()
     }
 }

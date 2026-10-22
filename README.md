@@ -70,6 +70,7 @@ for what is read locally, which hosts are contacted, and how to report issues.
 - [Snapshot contract](docs/snapshot-contract.md) — file bridge for external UIs (Cyclop, etc.)
 - [Providers](docs/providers.md) — credential paths and how to add one
 - [Changelog](CHANGELOG.md) — what’s new per version
+- [Release & signing](docs/release.md) — Developer ID / notarization
 - [Contributing](CONTRIBUTING.md)
 
 ## Limitations

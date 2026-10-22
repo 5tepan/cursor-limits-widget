@@ -13,7 +13,7 @@ enum ProviderDiagnosticsStore {
     private static let fileName = "diagnostics.json"
     private static let maxEntries = 40
     /// Serializes read-modify-write across parallel provider refreshes.
-    private static let queue = DispatchQueue(label: "com.local.CursorLimits.diagnostics")
+    private static let queue = DispatchQueue(label: "com.5tepan.cursorlimits.diagnostics")
 
     private static var fileURL: URL {
         AppPaths.applicationSupportDirectoryURL.appendingPathComponent(fileName)

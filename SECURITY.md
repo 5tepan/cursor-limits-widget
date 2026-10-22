@@ -62,3 +62,8 @@ Include: macOS version, app version, steps, and whether tokens were exposed.
 Release zips from CI are often **ad-hoc signed** (no Developer ID notarization
 unless a maintainer adds one). Gatekeeper may require **Open Anyway**. That is
 a distribution limitation, not a request for Accessibility or Full Disk Access.
+
+Release builds enable **Hardened Runtime**. To ship a Gatekeeper-clean zip, see
+[docs/release.md](docs/release.md) (`DEVELOPER_ID` + `NOTARY_PROFILE`).
+
+Bundle ID (1.2.0+): `com.5tepan.cursorlimits`.

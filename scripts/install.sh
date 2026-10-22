@@ -5,7 +5,7 @@ set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 APP_SRC="$HERE/CursorLimits.app"
 DEST="/Applications/CursorLimits.app"
-WIDGET_ID="com.local.CursorLimits.widget"
+WIDGET_ID="com.5tepan.cursorlimits.widget"
 
 if [[ ! -d "$APP_SRC" ]]; then
   osascript -e 'display alert "CursorLimits.app not found" message "Keep Install.command next to CursorLimits.app inside the unzipped folder." as critical' || true

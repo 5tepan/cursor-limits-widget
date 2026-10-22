@@ -36,6 +36,7 @@ credentials/
 **/preferences.json
 **/diagnostics.json
 **/alert-state.json
+**/bundle-id-migrated-v1
 **/state.vscdb
 **/state.vscdb-*
 *.token

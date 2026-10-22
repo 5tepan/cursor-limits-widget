@@ -5,34 +5,40 @@ import WidgetKit
 @main
 struct CursorLimitsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var model = AppModel()
 
     var body: some Scene {
         MenuBarExtra {
-            MenuBarContent(model: model)
-                .onAppear { appDelegate.model = model }
+            MenuBarContent(model: appDelegate.model)
                 .onOpenURL { url in
-                    DeepLinkRouter.handle(url, model: model)
+                    DeepLinkRouter.handle(url, model: appDelegate.model)
                 }
         } label: {
-            HStack(spacing: 5) {
-                MenuBarGlyph(fraction: model.menuBarFraction)
-                Text(model.menuBarTitle)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-            }
+            MenuBarLabel(model: appDelegate.model)
         }
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView(model: model)
+            SettingsView(model: appDelegate.model)
+        }
+    }
+}
+
+private struct MenuBarLabel: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        HStack(spacing: 5) {
+            MenuBarGlyph(fraction: model.menuBarFraction)
+            Text(model.menuBarTitle)
+                .font(.system(size: 12, weight: .medium, design: .rounded))
         }
     }
 }
 
 @MainActor
 final class AppModel: ObservableObject {
-    @Published var snapshot: AppSnapshot = AppSnapshotStore.load() ?? .empty
-    @Published var preferences: AppPreferences = AppPreferencesStore.load()
+    @Published var snapshot: AppSnapshot = .empty
+    @Published var preferences: AppPreferences = .default
     @Published var isRefreshing = false
     @Published var lastError: String?
     @Published var language: LanguagePreference = LanguageStore.preference
@@ -46,6 +52,8 @@ final class AppModel: ObservableObject {
     private var pendingLaunchDiscovery = true
     /// Settings → Rescan: force discovery once even after completion.
     private var forceDiscovery = false
+    /// Coalesce overlapping refresh requests (timer + button + deep link).
+    private var refreshAgain = false
 
     var menuBarFraction: Double? {
         guard let primary = snapshot.primary, primary.status == .ok else { return nil }
@@ -65,6 +73,11 @@ final class AppModel: ObservableObject {
     }
 
     init() {
+        BundleIdentity.migrateLegacyDataIfNeeded()
+        snapshot = AppSnapshotStore.load() ?? .empty
+        preferences = AppPreferencesStore.load()
+        language = LanguageStore.preference
+
         startTimer()
         prefsObserver = NotificationCenter.default.addObserver(
             forName: AppPreferencesStore.changeNotification,
@@ -151,9 +164,18 @@ final class AppModel: ObservableObject {
     }
 
     func refresh() async {
-        guard !isRefreshing else { return }
+        if isRefreshing {
+            refreshAgain = true
+            return
+        }
         isRefreshing = true
-        defer { isRefreshing = false }
+        defer {
+            isRefreshing = false
+            if refreshAgain {
+                refreshAgain = false
+                Task { await refresh() }
+            }
+        }
 
         preferences = AppPreferencesStore.load()
         let discovery = forceDiscovery
@@ -176,7 +198,6 @@ final class AppModel: ObservableObject {
                 prefs.didCompleteDiscovery = true
             }
             preferences = AppPreferencesStore.load()
-            // Re-filter snapshot providers to enabled set for consistent UI
             let enabled = Set(preferences.enabledProviderIDs)
             next.providers = next.providers.filter { enabled.contains($0.providerID) }
             next.enabledProviderIDs = preferences.enabledProviderIDs
@@ -189,7 +210,6 @@ final class AppModel: ObservableObject {
 
         next.primaryProviderID = preferences.primaryProviderID
         next.enabledProviderIDs = preferences.enabledProviderIDs
-        // Stable order: primary first, then enabled order
         next.providers = orderedProviders(next.providers, primary: preferences.primaryProviderID)
 
         snapshot = next
@@ -263,7 +283,6 @@ final class AppModel: ObservableObject {
             .map(\.providerID)
         AppPreferencesStore.update { prefs in
             prefs.enabledProviderIDs = keep.isEmpty ? [.cursor] : keep
-            // Drop manual primary if it was pruned
             if !prefs.enabledProviderIDs.contains(prefs.primaryProviderID) {
                 prefs.primaryProviderID = prefs.enabledProviderIDs[0]
             }
