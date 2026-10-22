@@ -105,6 +105,23 @@ enum L10n {
     static var refreshNow: String { t("Обновить сейчас", "Refresh now") }
     static var openDataFolder: String { t("Открыть папку данных", "Open data folder") }
     static var launchAtLogin: String { t("Запускать при входе в систему", "Launch at login") }
+    static var alertsSection: String { t("Уведомления", "Alerts") }
+    static var alertsEnabled: String {
+        t("Уведомлять при 70% / 90% / 100%", "Notify at 70% / 90% / 100%")
+    }
+    static var alertsHint: String {
+        t(
+            "Только для основного провайдера. Повторно — после смены цикла.",
+            "Primary provider only. Fires again after the billing cycle resets."
+        )
+    }
+    static var quietHours: String { t("Тихие часы", "Quiet hours") }
+    static var quietHoursHint: String {
+        t("Не беспокоить в этом интервале (может через полночь).", "Mute alerts in this window (may wrap midnight).")
+    }
+    static var compactMenuBarTitle: String {
+        t("Компактный title: % · дни до сброса", "Compact title: % · days until reset")
+    }
     static var howToConnect: String { t("Как подключить аккаунт", "How to connect") }
     static var language: String { t("Язык", "Language") }
     static var languageSystem: String { t("Как в системе", "Match system") }

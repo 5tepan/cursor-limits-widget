@@ -10,6 +10,7 @@ not create accounts, and does not upload your tokens.
 | Usage snapshot | `~/Library/Application Support/CursorLimits/app-snapshot.json` (and a copy for the widget container) | No — local only |
 | Preferences (language, enabled providers, primary) | `…/preferences.json` | No |
 | Redacted error log | `…/diagnostics.json` | No — secrets stripped before write |
+| Alert dedupe state | `…/alert-state.json` | No — which thresholds already fired this cycle |
 | Optional Copilot OAuth token (device flow) | macOS Keychain service `CursorLimits-GitHub` | No |
 | Optional refreshed Cursor access token | macOS Keychain service `CursorLimits-Cursor` | No |
 

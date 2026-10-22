@@ -7,6 +7,38 @@ enum Formatters {
         return String(format: "%.0f%%", fraction * 100)
     }
 
+    /// Menu bar label: `82%` or `82% · 4d` when a reset date is known.
+    static func compactMenuBarTitle(fraction: Double?, resetAt: Date?, includeReset: Bool) -> String {
+        let pct = percent(fraction)
+        guard includeReset, let resetAt else { return pct }
+        let days = compactDaysUntilReset(resetAt)
+        guard !days.isEmpty else { return pct }
+        return "\(pct) · \(days)"
+    }
+
+    /// Ultra-short countdown for the menu bar (`4d` / `4д`, `today` / `сег.`).
+    static func compactDaysUntilReset(_ date: Date?) -> String {
+        guard let date else { return "" }
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        let end = calendar.startOfDay(for: date)
+        let days = calendar.dateComponents([.day], from: start, to: end).day ?? 0
+        if L10n.isRussian {
+            switch days {
+            case ...(-1): return "сейч."
+            case 0: return "сег."
+            case 1: return "завт."
+            default: return "\(days)д"
+            }
+        }
+        switch days {
+        case ...(-1): return "now"
+        case 0: return "today"
+        case 1: return "tmrw"
+        default: return "\(days)d"
+        }
+    }
+
     static func percentLabel(_ fraction: Double?) -> String {
         guard let fraction else { return "н/д" }
         return String(format: "%.0f%%", min(max(fraction, 0), 9.99) * 100)

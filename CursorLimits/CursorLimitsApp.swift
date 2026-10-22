@@ -56,7 +56,12 @@ final class AppModel: ObservableObject {
         guard let primary = snapshot.primary, primary.status == .ok else {
             return "Limits"
         }
-        return Formatters.percent(primary.primaryFraction)
+        let reset = primary.windows.compactMap(\.resetsAt).max()
+        return Formatters.compactMenuBarTitle(
+            fraction: primary.primaryFraction,
+            resetAt: reset,
+            includeReset: preferences.compactMenuBarTitle
+        )
     }
 
     init() {
@@ -197,6 +202,35 @@ final class AppModel: ObservableObject {
         } catch {
             lastError = error.localizedDescription
         }
+
+        await UsageAlertNotifier.evaluate(snapshot: next, preferences: preferences)
+    }
+
+    func setAlertsEnabled(_ enabled: Bool) {
+        AppPreferencesStore.update { $0.alertsEnabled = enabled }
+        preferences = AppPreferencesStore.load()
+        if enabled {
+            Task { await UsageAlertNotifier.evaluate(snapshot: snapshot, preferences: preferences) }
+        }
+    }
+
+    func setQuietHoursEnabled(_ enabled: Bool) {
+        AppPreferencesStore.update { $0.quietHoursEnabled = enabled }
+        preferences = AppPreferencesStore.load()
+    }
+
+    func setQuietHours(start: Int, end: Int) {
+        AppPreferencesStore.update {
+            $0.quietHoursStartHour = start
+            $0.quietHoursEndHour = end
+        }
+        preferences = AppPreferencesStore.load()
+    }
+
+    func setCompactMenuBarTitle(_ enabled: Bool) {
+        AppPreferencesStore.update { $0.compactMenuBarTitle = enabled }
+        preferences = AppPreferencesStore.load()
+        objectWillChange.send()
     }
 
     func connectCopilot() async {

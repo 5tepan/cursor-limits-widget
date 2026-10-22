@@ -35,6 +35,7 @@ credentials/
 **/app-snapshot.json
 **/preferences.json
 **/diagnostics.json
+**/alert-state.json
 **/state.vscdb
 **/state.vscdb-*
 *.token

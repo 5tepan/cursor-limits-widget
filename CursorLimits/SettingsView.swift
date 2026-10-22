@@ -280,6 +280,67 @@ struct SettingsView: View {
                     }
                 }
 
+                settingsGroup(title: L10n.alertsSection) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Toggle(L10n.alertsEnabled, isOn: Binding(
+                            get: { model.preferences.alertsEnabled },
+                            set: { model.setAlertsEnabled($0) }
+                        ))
+                        .toggleStyle(.switch)
+
+                        Text(L10n.alertsHint)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+
+                        Toggle(L10n.quietHours, isOn: Binding(
+                            get: { model.preferences.quietHoursEnabled },
+                            set: { model.setQuietHoursEnabled($0) }
+                        ))
+                        .toggleStyle(.switch)
+                        .disabled(!model.preferences.alertsEnabled)
+
+                        if model.preferences.quietHoursEnabled {
+                            Text(L10n.quietHoursHint)
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                            HStack(spacing: 12) {
+                                Picker(L10n.t("С", "From"), selection: Binding(
+                                    get: { model.preferences.quietHoursStartHour },
+                                    set: { model.setQuietHours(start: $0, end: model.preferences.quietHoursEndHour) }
+                                )) {
+                                    ForEach(0..<24, id: \.self) { hour in
+                                        Text(String(format: "%02d:00", hour)).tag(hour)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 90)
+
+                                Text("→")
+                                    .foregroundStyle(.secondary)
+
+                                Picker(L10n.t("До", "To"), selection: Binding(
+                                    get: { model.preferences.quietHoursEndHour },
+                                    set: { model.setQuietHours(start: model.preferences.quietHoursStartHour, end: $0) }
+                                )) {
+                                    ForEach(0..<24, id: \.self) { hour in
+                                        Text(String(format: "%02d:00", hour)).tag(hour)
+                                    }
+                                }
+                                .labelsHidden()
+                                .frame(width: 90)
+                            }
+                            .disabled(!model.preferences.alertsEnabled)
+                        }
+
+                        Toggle(L10n.compactMenuBarTitle, isOn: Binding(
+                            get: { model.preferences.compactMenuBarTitle },
+                            set: { model.setCompactMenuBarTitle($0) }
+                        ))
+                        .toggleStyle(.switch)
+                    }
+                }
+
                 settingsGroup(title: L10n.actions) {
                     Toggle(L10n.launchAtLogin, isOn: $launchAtLogin)
                         .toggleStyle(.switch)

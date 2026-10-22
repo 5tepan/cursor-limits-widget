@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `schemaVersion` on `app-snapshot.json` + [snapshot contract](docs/snapshot-contract.md) for external readers
 - Deep links `cursorlimits://refresh` and `cursorlimits://settings` (Cyclop handoff)
 - Multi-provider onboarding checklist; Settings → Rescan providers
+- Usage alerts at 70% / 90% / 100% (primary) with optional quiet hours
+- Compact menu bar title (`82% · 4d`) and urgency-colored glyph above 70%
 
 ### Changed
 

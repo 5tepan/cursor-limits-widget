@@ -13,6 +13,15 @@ struct AppPreferences: Equatable, Sendable {
     var primarySelectionMode: PrimarySelectionMode
     /// First-launch (or manual rescan) discovery has finished — do not overwrite enables again.
     var didCompleteDiscovery: Bool
+    /// Notify when primary usage crosses 70 / 90 / 100%.
+    var alertsEnabled: Bool
+    var quietHoursEnabled: Bool
+    /// Hour of day 0…23 (inclusive start).
+    var quietHoursStartHour: Int
+    /// Hour of day 0…23 (exclusive end); may wrap past midnight.
+    var quietHoursEndHour: Int
+    /// Show reset countdown next to % in the menu bar (`82% · 4d`).
+    var compactMenuBarTitle: Bool
 
     static var `default`: AppPreferences {
         AppPreferences(
@@ -20,7 +29,12 @@ struct AppPreferences: Equatable, Sendable {
             enabledProviderIDs: AppPreferencesStore.defaultEnabled,
             primaryProviderID: .cursor,
             primarySelectionMode: .automatic,
-            didCompleteDiscovery: false
+            didCompleteDiscovery: false,
+            alertsEnabled: true,
+            quietHoursEnabled: false,
+            quietHoursStartHour: 22,
+            quietHoursEndHour: 8,
+            compactMenuBarTitle: true
         )
     }
 }
@@ -28,6 +42,7 @@ struct AppPreferences: Equatable, Sendable {
 extension AppPreferences: Codable {
     enum CodingKeys: String, CodingKey {
         case language, enabledProviderIDs, primaryProviderID, primarySelectionMode, didCompleteDiscovery
+        case alertsEnabled, quietHoursEnabled, quietHoursStartHour, quietHoursEndHour, compactMenuBarTitle
     }
 
     init(from decoder: Decoder) throws {
@@ -40,6 +55,11 @@ extension AppPreferences: Codable {
             ?? .automatic
         // Existing installs already have a customized list — treat as discovered.
         didCompleteDiscovery = try c.decodeIfPresent(Bool.self, forKey: .didCompleteDiscovery) ?? true
+        alertsEnabled = try c.decodeIfPresent(Bool.self, forKey: .alertsEnabled) ?? true
+        quietHoursEnabled = try c.decodeIfPresent(Bool.self, forKey: .quietHoursEnabled) ?? false
+        quietHoursStartHour = try c.decodeIfPresent(Int.self, forKey: .quietHoursStartHour) ?? 22
+        quietHoursEndHour = try c.decodeIfPresent(Int.self, forKey: .quietHoursEndHour) ?? 8
+        compactMenuBarTitle = try c.decodeIfPresent(Bool.self, forKey: .compactMenuBarTitle) ?? true
     }
 
     func encode(to encoder: Encoder) throws {
@@ -49,6 +69,11 @@ extension AppPreferences: Codable {
         try c.encode(primaryProviderID, forKey: .primaryProviderID)
         try c.encode(primarySelectionMode, forKey: .primarySelectionMode)
         try c.encode(didCompleteDiscovery, forKey: .didCompleteDiscovery)
+        try c.encode(alertsEnabled, forKey: .alertsEnabled)
+        try c.encode(quietHoursEnabled, forKey: .quietHoursEnabled)
+        try c.encode(quietHoursStartHour, forKey: .quietHoursStartHour)
+        try c.encode(quietHoursEndHour, forKey: .quietHoursEndHour)
+        try c.encode(compactMenuBarTitle, forKey: .compactMenuBarTitle)
     }
 }
 
@@ -157,6 +182,8 @@ enum AppPreferencesStore {
         if !copy.enabledProviderIDs.contains(copy.primaryProviderID) {
             copy.primaryProviderID = copy.enabledProviderIDs.first ?? .cursor
         }
+        copy.quietHoursStartHour = ((copy.quietHoursStartHour % 24) + 24) % 24
+        copy.quietHoursEndHour = ((copy.quietHoursEndHour % 24) + 24) % 24
         return copy
     }
 
