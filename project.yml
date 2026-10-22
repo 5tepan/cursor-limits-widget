@@ -3,6 +3,8 @@ options:
   bundleIdPrefix: com.5tepan
   deploymentTarget:
     macOS: "14.0"
+  # Xcode 15.x on GitHub macos-14 cannot open objectVersion 77 (Xcode 16).
+  objectVersion: 60
   createIntermediateGroups: true
   developmentLanguage: en
   groupSortPosition: top

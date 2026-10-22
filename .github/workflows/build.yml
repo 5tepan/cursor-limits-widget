@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
 
@@ -29,7 +29,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO
 
   build:
-    runs-on: macos-14
+    runs-on: macos-15
     needs: test
     steps:
       - uses: actions/checkout@v4
