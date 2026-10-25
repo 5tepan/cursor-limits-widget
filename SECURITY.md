@@ -21,7 +21,7 @@ WidgetKit can read them. Nothing is sent to a Cursor Limits server — there isn
 
 Local credentials that **you already created** by signing into other tools:
 
-- **Cursor** — session in Cursor’s `state.vscdb` (**read-only**; refreshed tokens go to our Keychain, not back into Cursor’s DB)
+- **Cursor** — session in Cursor’s `state.vscdb` (**read-only**; refreshed tokens go to our Keychain, not back into Cursor’s DB). Newer Cursor builds may seal tokens as `cursor-safe-storage:v1:`; we decrypt via the login Keychain item `Cursor Safe Storage` / `Cursor Key` (Electron safeStorage) and never log the plaintext.
 - **Claude Code** — `~/.claude` / Keychain entry used by the CLI
 - **Codex** — `~/.codex/auth.json`
 - **Ollama Cloud / OpenCode Go** — keys in OpenCode `auth.json` (or env vars)

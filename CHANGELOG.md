@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2026-10-25
+
 ### Added
 
 - In-app updates: automatic GitHub Releases check, notification when a newer version is out, Settings → Updates (check / download)
+- Decrypt Cursor `cursor-safe-storage:v1:` tokens via Keychain `Cursor Safe Storage` (Electron safeStorage)
+
+### Fixed
+
+- Cursor usage after IDE updates that enable `authTokenEncryptionAtRest` (encrypted `state.vscdb` tokens no longer sent as Bearer)
 
 ## [1.2.0] - 2026-10-22
 
@@ -68,7 +75,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release: macOS menu bar app + WidgetKit extension for Cursor usage limits
 - Local session read + official API refresh; snapshot dual-written to Application Support and the widget container (no App Groups)
 
-[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/5tepan/cursor-limits-widget/releases/tag/v1.0.0

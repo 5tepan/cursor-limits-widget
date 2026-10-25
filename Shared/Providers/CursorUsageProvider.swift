@@ -4,7 +4,8 @@ struct CursorUsageProvider: UsageProvider {
     let id: ProviderID = .cursor
 
     func isAvailable() -> Bool {
-        CursorCredentialsLoader.load() != nil
+        // Sealed rows still count — refresh will ask for Keychain access.
+        CursorCredentialsLoader.hasStoredToken()
     }
 
     func refresh() async -> ProviderUsage {

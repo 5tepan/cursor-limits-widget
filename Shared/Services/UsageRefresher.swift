@@ -2,14 +2,30 @@ import Foundation
 
 enum UsageRefresher {
     static func refresh() async -> UsageSnapshot {
-        guard var credentials = CursorCredentialsLoader.load() else {
-            var snap = UsageSnapshot.empty
-            snap.status = .authMissing
-            snap.errorMessage = L10n.noSessionDetail
-            snap.fetchedAt = Date()
-            return snap
-        }
+        // Manual / coalesced refresh may re-prompt Keychain after a prior denial.
+        CursorSafeStorageKeychain.allowAsking()
 
+        switch CursorCredentialsLoader.loadDetailed() {
+        case .absent:
+            return authMissingSnapshot(message: L10n.noSessionDetail)
+        case .keychainRefused:
+            return authMissingSnapshot(message: L10n.cursorKeychainRefused)
+        case .unreadable:
+            return authMissingSnapshot(message: L10n.cursorTokenUnreadable)
+        case .credentials(var credentials):
+            return await refresh(credentials: &credentials)
+        }
+    }
+
+    private static func authMissingSnapshot(message: String) -> UsageSnapshot {
+        var snap = UsageSnapshot.empty
+        snap.status = .authMissing
+        snap.errorMessage = message
+        snap.fetchedAt = Date()
+        return snap
+    }
+
+    private static func refresh(credentials: inout CursorCredentials) async -> UsageSnapshot {
         do {
             if CursorCredentialsLoader.isExpired(credentials.accessToken),
                credentials.refreshToken != nil

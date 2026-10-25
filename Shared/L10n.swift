@@ -83,6 +83,18 @@ enum L10n {
             "Sign in to Cursor IDE (or another provider) on this Mac. No separate login or token paste is required."
         )
     }
+    static var cursorKeychainRefused: String {
+        t(
+            "Нужен доступ к «Cursor Safe Storage» в связке ключей. Нажмите «Обновить» и разрешите доступ (Always Allow).",
+            "Keychain access to “Cursor Safe Storage” is required. Tap Refresh and allow access (Always Allow)."
+        )
+    }
+    static var cursorTokenUnreadable: String {
+        t(
+            "Не удалось расшифровать сессию Cursor. Откройте Cursor IDE, затем обновите здесь снова.",
+            "Could not decrypt the Cursor session. Open Cursor IDE, then refresh here again."
+        )
+    }
     static var widgetHintOptional: String {
         t(
             "Виджеты на рабочем столе пока могут не работать — надёжная поверхность сейчас меню-бар.",

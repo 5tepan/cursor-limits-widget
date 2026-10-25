@@ -12,7 +12,8 @@ enum AccountConnection {
     }
 
     static var hasLocalSession: Bool {
-        CursorCredentialsLoader.load() != nil
+        // Count sealed tokens too — decrypt happens on refresh (may prompt Keychain).
+        CursorCredentialsLoader.hasStoredToken()
     }
 
     static func openCursor() {

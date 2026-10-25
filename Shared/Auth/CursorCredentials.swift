@@ -10,6 +10,22 @@ struct CursorCredentials: Sendable {
     let databaseURL: URL
 }
 
+/// Outcome of reading Cursor's session from `state.vscdb` (+ optional Keychain refresh cache).
+enum CursorCredentialLoad: Sendable {
+    case credentials(CursorCredentials)
+    /// No access-token row (or Cursor not installed).
+    case absent
+    /// Row is sealed and the user denied / dismissed the Keychain prompt.
+    case keychainRefused
+    /// Row is sealed but the Keychain key does not open it.
+    case unreadable
+
+    var credentials: CursorCredentials? {
+        if case .credentials(let value) = self { return value }
+        return nil
+    }
+}
+
 /// Stores refreshed Cursor access tokens in our Keychain — never write Cursor's `state.vscdb`.
 enum CursorTokenKeychain {
     private static let service = "CursorLimits-Cursor"
@@ -46,6 +62,15 @@ enum CursorTokenKeychain {
         else { return nil }
         return token
     }
+
+    static func clear() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: service,
+            kSecAttrAccount as String: account
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
 }
 
 enum CursorCredentialsLoader {
@@ -59,31 +84,79 @@ enum CursorCredentialsLoader {
         return AppPaths.cursorStateDatabaseURL
     }
 
+    /// Convenience for call sites that only need a usable session.
     static func load(fileManager: FileManager = .default) -> CursorCredentials? {
-        let url = defaultStateDatabaseURL(fileManager: fileManager)
-        let dbToken = readValue(key: accessTokenKey, at: url)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        let keychainToken = CursorTokenKeychain.readAccessToken()
+        loadDetailed(fileManager: fileManager).credentials
+    }
 
-        // Prefer a non-expired Keychain token (from our refresh); fall back to Cursor DB.
-        let accessToken: String?
-        if let keychainToken, !isExpired(keychainToken) {
-            accessToken = keychainToken
-        } else if let dbToken, !dbToken.isEmpty {
-            accessToken = dbToken
+    static func loadDetailed(fileManager: FileManager = .default) -> CursorCredentialLoad {
+        let url = defaultStateDatabaseURL(fileManager: fileManager)
+        guard let rawAccess = readValue(key: accessTokenKey, at: url)?
+            .trimmingCharacters(in: .whitespacesAndNewlines),
+              !rawAccess.isEmpty
+        else { return .absent }
+
+        let unsealedAccess: String
+        if ChromiumSafeStorage.isSealed(rawAccess) {
+            switch unsealStored(rawAccess) {
+            case .token(let token):
+                unsealedAccess = token
+            case .keychainRefused:
+                return .keychainRefused
+            case .unreadable:
+                return .unreadable
+            }
         } else {
-            accessToken = keychainToken ?? dbToken
+            unsealedAccess = rawAccess
         }
 
-        guard let accessToken, !accessToken.isEmpty else { return nil }
+        let rawRefresh = readValue(key: refreshTokenKey, at: url)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let refreshToken: String?
+        if let rawRefresh, !rawRefresh.isEmpty {
+            if ChromiumSafeStorage.isSealed(rawRefresh) {
+                // Prefer a second look with the same key; if it fails, keep nil (access may still work).
+                refreshToken = unsealStored(rawRefresh).token
+            } else {
+                refreshToken = rawRefresh
+            }
+        } else {
+            refreshToken = nil
+        }
 
-        return CursorCredentials(
-            accessToken: accessToken,
-            refreshToken: readValue(key: refreshTokenKey, at: url),
-            membershipType: readValue(key: membershipTypeKey, at: url),
-            email: readValue(key: emailKey, at: url),
-            databaseURL: url
+        let keychainToken = CursorTokenKeychain.readAccessToken()
+        let accessToken: String?
+        if let keychainToken,
+           looksLikeJWT(keychainToken),
+           !isExpired(keychainToken)
+        {
+            accessToken = keychainToken
+        } else if looksLikeJWT(unsealedAccess) {
+            accessToken = unsealedAccess
+        } else {
+            accessToken = keychainToken.flatMap { looksLikeJWT($0) ? $0 : nil }
+        }
+
+        guard let accessToken, !accessToken.isEmpty else { return .unreadable }
+
+        return .credentials(
+            CursorCredentials(
+                accessToken: accessToken,
+                refreshToken: refreshToken.flatMap { $0.isEmpty ? nil : $0 },
+                membershipType: readValue(key: membershipTypeKey, at: url),
+                email: readValue(key: emailKey, at: url),
+                databaseURL: url
+            )
         )
+    }
+
+    /// True when Cursor has written an access-token row (sealed or plaintext).
+    static func hasStoredToken(fileManager: FileManager = .default) -> Bool {
+        let url = defaultStateDatabaseURL(fileManager: fileManager)
+        guard let raw = readValue(key: accessTokenKey, at: url)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        else { return false }
+        return !raw.isEmpty
     }
 
     static func jwtSubject(_ token: String) -> String? {
@@ -93,14 +166,22 @@ enum CursorCredentialsLoader {
 
     static func jwtExpiryDate(_ token: String) -> Date? {
         guard let payload = jwtPayload(token),
-              let exp = payload["exp"] as? Double
+              let exp = jwtNumber(payload["exp"])
         else { return nil }
         return Date(timeIntervalSince1970: exp)
     }
 
     static func isExpired(_ token: String, leeway: TimeInterval = 60, now: Date = Date()) -> Bool {
-        guard let exp = jwtExpiryDate(token) else { return false }
+        guard looksLikeJWT(token), let exp = jwtExpiryDate(token) else {
+            // Non-JWT (e.g. leftover sealed blob) must not be treated as fresh forever.
+            return true
+        }
         return exp <= now.addingTimeInterval(leeway)
+    }
+
+    static func looksLikeJWT(_ token: String) -> Bool {
+        let parts = token.split(separator: ".", omittingEmptySubsequences: false)
+        return parts.count == 3 && !token.hasPrefix(ChromiumSafeStorage.sealedPrefix)
     }
 
     /// Builds the WorkOS session cookie used by cursor.com dashboard APIs.
@@ -112,6 +193,40 @@ enum CursorCredentialsLoader {
         guard let encoded = raw.addingPercentEncoding(withAllowedCharacters: allowed) else { return nil }
         return "WorkosCursorSessionToken=\(encoded)"
     }
+
+    // MARK: - Unseal
+
+    private enum UnsealResult {
+        case token(String)
+        case keychainRefused
+        case unreadable
+
+        var token: String? {
+            if case .token(let value) = self { return value }
+            return nil
+        }
+    }
+
+    private static func unsealStored(_ raw: String) -> UnsealResult {
+        guard let key = CursorSafeStorageKeychain.key() else {
+            return .keychainRefused
+        }
+        if let plain = ChromiumSafeStorage.unseal(raw, key: key) {
+            return .token(plain)
+        }
+        // Kept key may be stale after Cursor rotated Safe Storage — forget and retry once.
+        CursorSafeStorageKeychain.forget()
+        CursorSafeStorageKeychain.allowAsking()
+        guard let key2 = CursorSafeStorageKeychain.key() else {
+            return .keychainRefused
+        }
+        if let plain = ChromiumSafeStorage.unseal(raw, key: key2) {
+            return .token(plain)
+        }
+        return .unreadable
+    }
+
+    // MARK: - JWT
 
     private static func jwtPayload(_ token: String) -> [String: Any]? {
         let parts = token.split(separator: ".")
@@ -127,6 +242,17 @@ enum CursorCredentialsLoader {
         return json
     }
 
+    private static func jwtNumber(_ value: Any?) -> Double? {
+        switch value {
+        case let value as Double: return value
+        case let value as Int: return Double(value)
+        case let value as NSNumber: return value.doubleValue
+        default: return nil
+        }
+    }
+
+    // MARK: - SQLite
+
     private static func readValue(key: String, at url: URL) -> String? {
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
 
@@ -141,11 +267,20 @@ enum CursorCredentialsLoader {
         defer { sqlite3_finalize(statement) }
 
         sqlite3_bind_text(statement, 1, key, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-        guard sqlite3_step(statement) == SQLITE_ROW,
-              let cString = sqlite3_column_text(statement, 0)
-        else { return nil }
+        guard sqlite3_step(statement) == SQLITE_ROW else { return nil }
 
-        return decodeBlobString(cString)
+        switch sqlite3_column_type(statement, 0) {
+        case SQLITE_TEXT:
+            guard let cString = sqlite3_column_text(statement, 0) else { return nil }
+            return decodeBlobString(cString)
+        case SQLITE_BLOB:
+            guard let bytes = sqlite3_column_blob(statement, 0) else { return nil }
+            let count = Int(sqlite3_column_bytes(statement, 0))
+            let data = Data(bytes: bytes, count: count)
+            return decodeBlobData(data)
+        default:
+            return nil
+        }
     }
 
     /// Cursor sometimes stores values as UTF-8, sometimes as UTF-16LE with NULs.
@@ -155,14 +290,23 @@ enum CursorCredentialsLoader {
 
         let length = strlen(cString)
         let data = Data(bytes: cString, count: length)
-        if let utf16 = String(data: data, encoding: .utf16LittleEndian)?
+        return decodeBlobData(data) ?? utf8.replacingOccurrences(of: "\0", with: "")
+    }
+
+    private static func decodeBlobData(_ data: Data) -> String? {
+        if data.count >= 2, data.count.isMultiple(of: 2),
+           data[data.startIndex] != 0,
+           data[data.index(after: data.startIndex)] == 0,
+           let utf16 = String(data: data, encoding: .utf16LittleEndian)?
             .trimmingCharacters(in: CharacterSet(charactersIn: "\0"))
             .trimmingCharacters(in: .whitespacesAndNewlines),
            !utf16.isEmpty
         {
             return utf16
         }
-        return utf8.replacingOccurrences(of: "\0", with: "")
+        return String(data: data, encoding: .utf8)?
+            .trimmingCharacters(in: CharacterSet(charactersIn: "\0"))
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 
@@ -173,7 +317,10 @@ enum CursorTokenRefresher {
     static func refresh(_ credentials: CursorCredentials) async throws -> CursorCredentials {
         guard let refreshToken = credentials.refreshToken?
             .trimmingCharacters(in: .whitespacesAndNewlines),
-            !refreshToken.isEmpty
+            !refreshToken.isEmpty,
+            // After encryption migration Cursor has been seen writing the same sealed blob
+            // into both access and refresh cells — that is not a usable refresh token.
+            refreshToken != credentials.accessToken
         else {
             throw RefreshError.missingRefreshToken
         }

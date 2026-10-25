@@ -2,7 +2,7 @@
 
 | ID | Display name | Credential source | Usage API |
 |---|---|---|---|
-| `cursor` | Cursor | Cursor `state.vscdb` | Cursor Connect / cookie APIs |
+| `cursor` | Cursor | Cursor `state.vscdb` (`cursorAuth/*`; may be `cursor-safe-storage:v1:` sealed via Keychain `Cursor Safe Storage`) | Cursor Connect / cookie APIs |
 | `claude` | Claude Code | `~/.claude` / CLI Keychain | Anthropic OAuth usage |
 | `codex` | Codex | `~/.codex/auth.json` | ChatGPT wham usage |
 | `ollama-cloud` | Ollama Cloud | OpenCode `auth.json` key `ollama-cloud`, or `OLLAMA_API_KEY` | `ollama.com/api/balance` |
