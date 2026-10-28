@@ -24,6 +24,8 @@ struct AppPreferences: Equatable, Sendable {
     var compactMenuBarTitle: Bool
     /// Periodically check GitHub Releases for a newer build.
     var automaticUpdateChecks: Bool
+    /// Hover panel under the Mac notch. Off until the user enables it.
+    var notchPanelEnabled: Bool
 
     static var `default`: AppPreferences {
         AppPreferences(
@@ -37,7 +39,8 @@ struct AppPreferences: Equatable, Sendable {
             quietHoursStartHour: 22,
             quietHoursEndHour: 8,
             compactMenuBarTitle: true,
-            automaticUpdateChecks: true
+            automaticUpdateChecks: true,
+            notchPanelEnabled: false
         )
     }
 }
@@ -46,7 +49,7 @@ extension AppPreferences: Codable {
     enum CodingKeys: String, CodingKey {
         case language, enabledProviderIDs, primaryProviderID, primarySelectionMode, didCompleteDiscovery
         case alertsEnabled, quietHoursEnabled, quietHoursStartHour, quietHoursEndHour, compactMenuBarTitle
-        case automaticUpdateChecks
+        case automaticUpdateChecks, notchPanelEnabled
     }
 
     init(from decoder: Decoder) throws {
@@ -65,6 +68,8 @@ extension AppPreferences: Codable {
         quietHoursEndHour = try c.decodeIfPresent(Int.self, forKey: .quietHoursEndHour) ?? 8
         compactMenuBarTitle = try c.decodeIfPresent(Bool.self, forKey: .compactMenuBarTitle) ?? true
         automaticUpdateChecks = try c.decodeIfPresent(Bool.self, forKey: .automaticUpdateChecks) ?? true
+        // Missing key stays off so existing installs do not grow a notch panel.
+        notchPanelEnabled = try c.decodeIfPresent(Bool.self, forKey: .notchPanelEnabled) ?? false
     }
 
     func encode(to encoder: Encoder) throws {
@@ -80,6 +85,7 @@ extension AppPreferences: Codable {
         try c.encode(quietHoursEndHour, forKey: .quietHoursEndHour)
         try c.encode(compactMenuBarTitle, forKey: .compactMenuBarTitle)
         try c.encode(automaticUpdateChecks, forKey: .automaticUpdateChecks)
+        try c.encode(notchPanelEnabled, forKey: .notchPanelEnabled)
     }
 }
 

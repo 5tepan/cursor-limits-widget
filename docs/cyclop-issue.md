@@ -1,5 +1,9 @@
 # Draft: issue for akalikbergenov/cyclop
 
+Status: optional. Since 1.3.0 Cursor Limits has its own notch panel
+(Settings → General → Notch, off by default). This draft is only for a
+read-only Cyclop tab that mirrors the snapshot — still no HTTP from Cyclop.
+
 Paste into https://github.com/akalikbergenov/cyclop/issues/new  
 (Language: Russian — matches CONTRIBUTING; English summary at the top.)
 

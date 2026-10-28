@@ -242,8 +242,8 @@ struct SettingsView: View {
                 settingsHeader(
                     title: L10n.t("Общее", "General"),
                     subtitle: L10n.t(
-                        "Язык, автозапуск и служебные действия.",
-                        "Language, launch at login, and utilities."
+                        "Язык, вырез, автозапуск и служебные действия.",
+                        "Language, notch, launch at login, and utilities."
                     )
                 )
 
@@ -257,6 +257,21 @@ struct SettingsView: View {
                                 model.setLanguage(option)
                             }
                         }
+                    }
+                }
+
+                settingsGroup(title: L10n.notchSection) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle(L10n.notchPanelEnabled, isOn: Binding(
+                            get: { model.preferences.notchPanelEnabled },
+                            set: { model.setNotchPanelEnabled($0) }
+                        ))
+                        .toggleStyle(.switch)
+
+                        Text(L10n.notchPanelHint)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
 

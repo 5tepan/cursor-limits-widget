@@ -33,7 +33,8 @@ each provider’s official API. Usage stays on this Mac.
 | Surface | Behaviour |
 |---|---|
 | **Menu bar** | Live % for the primary provider; expandable cards per connected source |
-| **Settings** | Enable providers, pick primary (or auto by highest usage), language, Copilot device flow |
+| **Notch** | Off by default. Hover the notch to open a black panel of every connected provider; each open refreshes usage |
+| **Settings** | Enable providers, pick primary (or auto by highest usage), language, notch, updates, Copilot device flow |
 | **Widgets** | Small / medium / large WidgetKit views (primary first; overflow → menu bar) |
 | **Launch discovery** | Tries every provider once, turns off those without a local session |
 
@@ -82,7 +83,7 @@ for what is read locally, which hosts are contacted, and how to report issues.
 ## Layout
 
 ```
-CursorLimits/          menu bar app + Settings
+CursorLimits/          menu bar app, Settings, optional notch panel
 CursorLimitsWidget/    WidgetKit extension
 Shared/                providers, refresh, storage, UI bits
 scripts/               install-local, package, Install.command

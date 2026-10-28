@@ -44,6 +44,11 @@ example:
 
 No analytics, crash reporters, or third-party CDNs.
 
+The optional notch panel does not add hosts or permissions. While it is open it
+refreshes the same enabled providers. Pointer position is read with
+`NSEvent.mouseLocation` (no Accessibility). At rest the panel is not drawn, and
+clicks outside the open panel are not captured.
+
 ## Diagnostics
 
 The in-app “Details” error sheet stores **redacted** text locally (Authorization

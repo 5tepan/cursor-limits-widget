@@ -194,6 +194,7 @@ struct ProviderCard: View {
     let isPrimary: Bool
     let expanded: Bool
     let onToggleExpanded: () -> Void
+    var fillOpacity: Double = 0.04
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -240,7 +241,7 @@ struct ProviderCard: View {
             }
         }
         .padding(10)
-        .background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(Color.primary.opacity(fillOpacity), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     @ViewBuilder

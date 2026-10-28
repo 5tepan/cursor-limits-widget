@@ -9,4 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model = AppModel()
         super.init()
     }
+
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        model.notchPanel.sync(model: model)
+    }
 }

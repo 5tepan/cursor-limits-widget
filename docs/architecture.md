@@ -30,6 +30,11 @@ snapshot from disk.
 2. Timer every 5 minutes + manual Refresh: only **enabled** providers.
 3. Primary provider: **automatic** (highest `primaryFraction`) or **manual**
    (Settings). Primary is first in the menu bar and the main widget block.
+4. Notch panel (Settings → General → Notch, **off by default**): nothing is
+   drawn until the pointer enters the notch (or the top centre on a Mac
+   without one). Opening it runs the same refresh as the menu bar. The panel
+   reads in-memory usage only — it does not write a second snapshot and does
+   not ask for Accessibility. Clicks outside the open panel pass through.
 
 ## Providers
 

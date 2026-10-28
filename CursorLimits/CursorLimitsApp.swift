@@ -59,6 +59,7 @@ final class AppModel: ObservableObject {
     private var forceDiscovery = false
     /// Coalesce overlapping refresh requests (timer + button + deep link).
     private var refreshAgain = false
+    let notchPanel = NotchPanelController()
 
     var menuBarFraction: Double? {
         guard let primary = snapshot.primary, primary.status == .ok else { return nil }
@@ -91,8 +92,10 @@ final class AppModel: ObservableObject {
             queue: .main
         ) { [weak self] _ in
             Task { @MainActor in
-                self?.preferences = AppPreferencesStore.load()
-                self?.language = LanguageStore.preference
+                guard let self else { return }
+                self.preferences = AppPreferencesStore.load()
+                self.language = LanguageStore.preference
+                self.notchPanel.sync(model: self)
             }
         }
         Task { await refresh() }
@@ -352,6 +355,12 @@ final class AppModel: ObservableObject {
         AppPreferencesStore.update { $0.compactMenuBarTitle = enabled }
         preferences = AppPreferencesStore.load()
         objectWillChange.send()
+    }
+
+    func setNotchPanelEnabled(_ enabled: Bool) {
+        AppPreferencesStore.update { $0.notchPanelEnabled = enabled }
+        preferences = AppPreferencesStore.load()
+        notchPanel.sync(model: self)
     }
 
     func connectCopilot() async {

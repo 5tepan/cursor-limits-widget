@@ -20,6 +20,7 @@ enum DeepLinkRouter {
             Task { await model.refresh() }
         case .settings:
             NSApp.activate(ignoringOtherApps: true)
+            NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
             NotificationCenter.default.post(name: .cursorLimitsOpenSettings, object: nil)
         case .none:
             break

@@ -134,6 +134,21 @@ enum L10n {
     static var compactMenuBarTitle: String {
         t("Компактный title: % · дни до сброса", "Compact title: % · days until reset")
     }
+    static var notchSection: String { t("Вырез", "Notch") }
+    static var notchPanelEnabled: String { t("Динамический отступ", "Dynamic notch") }
+    static var notchPanelHint: String {
+        t(
+            "В покое ничего не видно. Наведите курсор на вырез — откроется панель со всеми подключёнными сервисами и обновятся данные.",
+            "Nothing shows at rest. Move the pointer into the notch to open a panel of every connected service and refresh usage."
+        )
+    }
+    static var notchEmpty: String {
+        t(
+            "Нет подключённых сервисов. Включите их в настройках.",
+            "No connected services. Enable them in Settings."
+        )
+    }
+    static var notchOpenSettings: String { t("Открыть настройки", "Open Settings") }
     static var updatesSection: String { t("Обновления", "Updates") }
     static var automaticUpdateChecks: String {
         t("Автоматически проверять обновления", "Check for updates automatically")

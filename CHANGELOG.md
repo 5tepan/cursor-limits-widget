@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-10-28
+
+### Added
+
+- Optional notch panel (Settings → General → Notch), off by default. Nothing is drawn at rest; moving the pointer into the notch opens a black panel with full cards for every connected provider and refreshes usage. On a Mac without a notch, hover the top centre of the screen.
+
+### Changed
+
+- `cursorlimits://settings` opens the Settings window directly
+
 ## [1.2.1] - 2026-10-25
 
 ### Added
@@ -75,7 +85,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release: macOS menu bar app + WidgetKit extension for Cursor usage limits
 - Local session read + official API refresh; snapshot dual-written to Application Support and the widget container (no App Groups)
 
-[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/5tepan/cursor-limits-widget/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/5tepan/cursor-limits-widget/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/5tepan/cursor-limits-widget/compare/v1.0.0...v1.1.0

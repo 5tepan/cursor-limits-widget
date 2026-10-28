@@ -41,8 +41,8 @@ targets:
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         GENERATE_INFOPLIST_FILE: NO
         ENABLE_APP_SANDBOX: NO
-        MARKETING_VERSION: "1.2.1"
-        CURRENT_PROJECT_VERSION: "6"
+        MARKETING_VERSION: "1.3.0"
+        CURRENT_PROJECT_VERSION: "7"
     dependencies:
       - target: CursorLimitsWidget
         embed: true
@@ -84,5 +84,5 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         # WidgetKit silently skips unsandboxed appex in the macOS gallery
         ENABLE_APP_SANDBOX: YES
-        MARKETING_VERSION: "1.2.1"
-        CURRENT_PROJECT_VERSION: "6"
+        MARKETING_VERSION: "1.3.0"
+        CURRENT_PROJECT_VERSION: "7"
