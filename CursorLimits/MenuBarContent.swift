@@ -283,9 +283,16 @@ struct ProviderCard: View {
                 )
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(usage.windows) { window in
-                        UsageBar(title: windowLabel(window), fraction: window.fraction)
+                        VStack(alignment: .leading, spacing: 3) {
+                            UsageBar(title: windowLabel(window), fraction: window.fraction)
+                            if usage.providerID == .codex, let reset = window.resetsAt {
+                                Text("\(L10n.t("Сброс", "Resets")): \(reset.formatted(date: .abbreviated, time: .shortened))")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
-                    if let reset = usage.windows.compactMap(\.resetsAt).max() {
+                    if usage.providerID != .codex, let reset = usage.windows.compactMap(\.resetsAt).max() {
                         HStack {
                             Text("\(L10n.t("Цикл до", "Cycle ends")) \(Formatters.shortDate(reset))")
                                 .font(.caption)

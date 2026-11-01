@@ -5,6 +5,7 @@ struct NotchLimitsView: View {
     @ObservedObject var model: AppModel
     @ObservedObject var state: NotchPanelState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.openSettings) private var openSettingsWindow
     /// Cards the user folded. Cleared when the panel closes, so the next open
     /// starts with every provider fully expanded.
     @State private var collapsedIDs: Set<String> = []
@@ -189,6 +190,6 @@ struct NotchLimitsView: View {
 
     private func openSettings() {
         NSApp.activate(ignoringOtherApps: true)
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        openSettingsWindow()
     }
 }

@@ -94,7 +94,7 @@ struct CodexUsageProvider: UsageProvider {
         return nil
     }
 
-    private struct Window: Decodable {
+    struct Window: Decodable {
         let used_percent: Double?
         let limit_window_seconds: Double?
         let reset_at: Double?
@@ -102,8 +102,8 @@ struct CodexUsageProvider: UsageProvider {
 
         var usedFraction: Double? {
             guard let used_percent else { return nil }
-            // API may return 0...100 or 0...1
-            return UsageFraction.normalize(used_percent)
+            // WHAM's used_percent is expressed in percentage points, including 1%.
+            return min(max(used_percent / 100, 0), 1)
         }
 
         var resetDate: Date? {
